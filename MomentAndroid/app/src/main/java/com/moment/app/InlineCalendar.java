@@ -40,10 +40,10 @@ public class InlineCalendar {
    try(Cursor c=a.store.all()){while(c.moveToNext()){
     String name=c.getString(1),kind=c.getString(2),date=c.getString(3);long id=c.getLong(0);
     LocalDate itemDate;try{itemDate=LocalDate.parse(date);}catch(Exception e){continue;}
-    boolean birthdayMatch="birthday".equals(kind)&&itemDate.getMonthValue()==month.getMonthValue()&&(itemDate.getDayOfMonth()<=month.lengthOfMonth());
+    boolean birthdayMatch="birthday".equals(kind)&&itemDate.getMonthValue()==month.getMonthValue();
     boolean normalMatch=YearMonth.from(itemDate).equals(month);
     boolean mark="birthday".equals(kind)?birthdayMatch:normalMatch;
-    if(mark){int day=itemDate.getDayOfMonth();int[] arr=counts.get(day);if(arr==null){arr=new int[3];counts.put(day,arr);}arr["event".equals(kind)?0:"birthday".equals(kind)?1:2]++;}
+    if(mark){int day=(birthdayMatch&&itemDate.getMonthValue()==2&&itemDate.getDayOfMonth()==29&&!month.isLeapYear())?28:itemDate.getDayOfMonth();int[] arr=counts.get(day);if(arr==null){arr=new int[3];counts.put(day,arr);}arr["event".equals(kind)?0:"birthday".equals(kind)?1:2]++;}
     boolean selectedMatch="birthday".equals(kind)?monthDayMatches(itemDate,selected):date.equals(a.selectedDay);
     if(selectedMatch){String time="event".equals(kind)?a.store.eventDetails(id)[0]:"";daily.add(new String[]{String.valueOf(id),name,kind,time,date});}
    }}
