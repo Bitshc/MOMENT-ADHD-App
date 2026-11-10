@@ -41,12 +41,15 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
+
       - name: Build debug APK
-        run: gradle --no-daemon :app:assembleDebug
+        working-directory: MomentAndroid
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MOMENT-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: MomentAndroid/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
