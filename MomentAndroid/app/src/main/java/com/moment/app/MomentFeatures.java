@@ -26,9 +26,9 @@ public class MomentFeatures {
   previous.setText("‹  Previous");next.setText("Next  ›");header.addView(previous,new LinearLayout.LayoutParams(0,-2,1));header.addView(next,new LinearLayout.LayoutParams(0,-2,1));panel.addView(header);
   GridLayout grid=new GridLayout(a);grid.setColumnCount(7);panel.addView(grid);
   TextView help=text(a,"Events 📅  ·  Birthdays 🎂  ·  Tap any day to view plans.",13,false);panel.addView(help);
-  ScrollView scroll=new ScrollView(a);scroll.addView(panel);
+  LinearLayout shortcuts=new LinearLayout(a);Button addBirthday=new Button(a);addBirthday.setText("＋ Birthday");addBirthday.setAllCaps(false);Button addEvent=new Button(a);addEvent.setText("＋ Event");addEvent.setAllCaps(false);shortcuts.addView(addBirthday,new LinearLayout.LayoutParams(0,-2,1));shortcuts.addView(addEvent,new LinearLayout.LayoutParams(0,-2,1));panel.addView(shortcuts);ScrollView scroll=new ScrollView(a);scroll.addView(panel);
   AlertDialog dialog=new AlertDialog.Builder(a).setTitle("Your calendar").setView(scroll).setPositiveButton("Close",null).create();
-  previous.setOnClickListener(v->{dialog.dismiss();calendar(a,month.minusMonths(1));});
+  addBirthday.setOnClickListener(v->{dialog.dismiss();a.addDialog("birthday");});addEvent.setOnClickListener(v->{dialog.dismiss();addEvent(a);});previous.setOnClickListener(v->{dialog.dismiss();calendar(a,month.minusMonths(1));});
   next.setOnClickListener(v->{dialog.dismiss();calendar(a,month.plusMonths(1));});
   dialog.show();
   a.db.execute(()->{
