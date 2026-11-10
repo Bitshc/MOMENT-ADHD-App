@@ -1,24 +1,64 @@
 package com.moment.app;
-import android.app.*;import android.os.*;import android.graphics.Color;import android.database.Cursor;import android.view.*;import android.widget.*;import java.text.*;import java.util.*;import java.time.*;import java.time.temporal.ChronoUnit;import java.util.concurrent.*;
+import android.app.*;
+import android.os.*;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.database.Cursor;
+import android.view.*;
+import android.widget.*;
+import java.text.*;
+import java.util.*;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
+import java.util.concurrent.*;
+
 public class MainActivity extends Activity {
- Store store;final ExecutorService db=Executors.newSingleThreadExecutor();LinearLayout root,items;String selectedDay;SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
- public void onCreate(Bundle b){super.onCreate(b);store=new Store(this);selectedDay=fmt.format(new Date());show();if("com.moment.app.QUICK_ADD".equals(getIntent().getAction()))addDialog("task");}
- TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(38,34,59));t.setPadding(10,12,10,12);return t;}
- Button button(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
+ Store store;
+ final ExecutorService db=Executors.newSingleThreadExecutor();
+ LinearLayout root,items;
+ String selectedDay;
+ SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
+ final int INK=Color.rgb(43,37,66), MUTED=Color.rgb(111,105,130), PURPLE=Color.rgb(112,83,173), LAVENDER=Color.rgb(238,229,251), BG=Color.rgb(250,248,253), WHITE=Color.WHITE, SAGE=Color.rgb(225,239,226), BORDER=Color.rgb(232,227,239);
+
+ public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());show();if("com.moment.app.QUICK_ADD".equals(getIntent().getAction()))addDialog("task");}
+ int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+0.5f);}
+ GradientDrawable bg(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
+ GradientDrawable stroke(int color,int radius){GradientDrawable d=bg(color,radius);d.setStroke(dp(1),BORDER);return d;}
+ LinearLayout column(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l;}
+ LinearLayout row(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.HORIZONTAL);l.setGravity(Gravity.CENTER_VERTICAL);return l;}
+ TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(INK);t.setPadding(0,dp(5),0,dp(5));return t;}
+ TextView txt(String s,int size,int color,boolean bold){TextView t=label(s,size);t.setTextColor(color);if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t;}
+ LinearLayout.LayoutParams margins(int top,int bottom){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(top);p.bottomMargin=dp(bottom);return p;}
+ Button button(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(INK);b.setTextSize(15);b.setTypeface(Typeface.DEFAULT,Typeface.BOLD);b.setPadding(dp(10),dp(12),dp(10),dp(12));b.setBackground(stroke(WHITE,17));b.setOnClickListener(v->r.run());return b;}
+ void addTile(LinearLayout parent,String emoji,String title,String subtitle,Runnable action,int marginLeft){LinearLayout card=column();card.setPadding(dp(15),dp(12),dp(12),dp(12));card.setBackground(stroke(WHITE,18));card.setMinimumHeight(dp(121));card.addView(txt(emoji,24,INK,false));card.addView(txt(title,15,INK,true));card.addView(txt(subtitle,12,MUTED,false));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.leftMargin=dp(marginLeft);parent.addView(card,p);card.setOnClickListener(v->action.run());}
+ String prettyDate(){try{return new SimpleDateFormat("EEE, MMM d",Locale.US).format(fmt.parse(selectedDay));}catch(Exception e){return selectedDay;}}
  void write(Runnable work){db.execute(()->{work.run();MomentWidget.refresh(getApplicationContext());runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())show();});});}
- void show(){ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(18,24,18,30);root.setBackgroundColor(Color.rgb(250,248,255));scroll.addView(root);setContentView(scroll);
- root.addView(label("MOMENT",30));root.addView(label("One thing at a time. 🌿",16));root.addView(button("＋ Quick add",()->addDialog("task")));
- LinearLayout bar=new LinearLayout(this);bar.setOrientation(0);bar.addView(button("◀",()->move(-1)),new LinearLayout.LayoutParams(0,-2,1));bar.addView(button(selectedDay,()->pickDate()),new LinearLayout.LayoutParams(0,-2,3));bar.addView(button("▶",()->move(1)),new LinearLayout.LayoutParams(0,-2,1));root.addView(bar);
- LinearLayout actions=new LinearLayout(this);actions.setOrientation(0);actions.addView(button("+ Event",()->addDialog("event")),new LinearLayout.LayoutParams(0,-2,1));actions.addView(button("+ Birthday",()->addDialog("birthday")),new LinearLayout.LayoutParams(0,-2,1));root.addView(actions);
- root.addView(button("🎯 What’s next?",()->focus()));root.addView(button("🧠 Brain dump",()->brainDump()));root.addView(button("🎂 Upcoming birthdays",()->birthdays()));root.addView(button("💜 Shared Space — requests",()->sharedSpace()));
- root.addView(label("Your plans",22));items=new LinearLayout(this);items.setOrientation(1);root.addView(items);render();root.addView(label("Tip: long-press an item to delete it. Add the MOMENT widget from your Android home-screen widget picker.",13));}
+ void show(){
+  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root=column();root.setPadding(dp(20),dp(18),dp(20),dp(32));root.setBackgroundColor(BG);scroll.addView(root);setContentView(scroll);
+  LinearLayout header=row();TextView logo=txt("moment.",34,INK,true);header.addView(logo,new LinearLayout.LayoutParams(0,-2,1));TextView leaf=txt("✦",28,PURPLE,true);header.addView(leaf);root.addView(header);root.addView(txt("One thing at a time  🌿",15,MUTED,false));
+  LinearLayout welcome=column();welcome.setPadding(dp(18),dp(17),dp(18),dp(17));welcome.setBackground(bg(LAVENDER,23));LinearLayout.LayoutParams wp=margins(20,14);root.addView(welcome,wp);
+  TextView kicker=txt("YOUR SPACE TODAY",11,PURPLE,true);welcome.addView(kicker);
+  welcome.addView(txt("Your day, your pace.",23,INK,true));
+  welcome.addView(txt("Small steps count. You get to start anywhere.",13,MUTED,false));
+  Button quick=button("＋  Add one thing",()->addDialog("task"));quick.setBackground(bg(PURPLE,15));quick.setTextColor(WHITE);welcome.addView(quick,margins(12,0));
+  LinearLayout date=row();Button prev=button("‹",()->move(-1));Button choose=button(prettyDate()+"  ▾",()->pickDate());Button next=button("›",()->move(1));date.addView(prev,new LinearLayout.LayoutParams(dp(52),dp(51)));LinearLayout.LayoutParams mid=new LinearLayout.LayoutParams(0,dp(51),1);mid.leftMargin=dp(8);mid.rightMargin=dp(8);date.addView(choose,mid);date.addView(next,new LinearLayout.LayoutParams(dp(52),dp(51)));root.addView(date,margins(2,18));
+  LinearLayout heading=row();heading.addView(txt("Today's focus",21,INK,true),new LinearLayout.LayoutParams(0,-2,1));TextView small=txt("ONE STEP AT A TIME",10,PURPLE,true);heading.addView(small);root.addView(heading);
+  items=column();root.addView(items,margins(9,4));render();
+  Button focus=button("🎯  Help me choose one thing",()->focus());focus.setBackground(bg(SAGE,17));root.addView(focus,margins(10,19));
+  root.addView(txt("Your tools",21,INK,true));
+  LinearLayout first=row();addTile(first,"🧠","Brain dump","Get it out of your head",()->brainDump(),0);addTile(first,"📆","Add an event","Plan something ahead",()->addDialog("event"),10);root.addView(first,margins(8,9));
+  LinearLayout second=row();addTile(second,"🎂","Birthdays","Remember special days",()->birthdays(),0);addTile(second,"💜","Shared space","Requests & plans",()->sharedSpace(),10);root.addView(second);
+  Button birthday=button("＋  Save a birthday",()->addDialog("birthday"));birthday.setTextSize(14);root.addView(birthday,margins(12,13));
+  root.addView(txt("Tip: Hold a task to edit, reschedule, or delete it. Add the MOMENT widget from your home screen to see tasks at a glance.",12,MUTED,false));
+ }
  void move(int n){Calendar c=Calendar.getInstance();try{c.setTime(fmt.parse(selectedDay));}catch(Exception e){}c.add(Calendar.DATE,n);selectedDay=fmt.format(c.getTime());show();}
  void pickDate(){Calendar c=Calendar.getInstance();try{c.setTime(fmt.parse(selectedDay));}catch(Exception e){}new DatePickerDialog(this,(v,y,m,d)->{selectedDay=String.format(Locale.US,"%04d-%02d-%02d",y,m+1,d);show();},c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();}
  void addDialog(String kind){EditText input=new EditText(this);input.setSingleLine(false);input.setHint(kind.equals("task")?"What needs doing?":kind.equals("birthday")?"Whose birthday?":"What's happening? (include time in title)");new AlertDialog.Builder(this).setTitle("Add "+kind).setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{String s=input.getText().toString().trim();if(!s.isEmpty()){write(()->store.add(s,kind,selectedDay));}}).show();}
  void render(){
-  final String date=selectedDay;items.removeAllViews();items.addView(label("Loading plans…",15));
+  final String date=selectedDay;items.removeAllViews();items.addView(txt("Loading your plans…",14,MUTED,false));
   db.execute(()->{ArrayList<String[]> rows=new ArrayList<>();try(Cursor cur=store.all()){while(cur.moveToNext()){String day=cur.getString(3),kind=cur.getString(2);if(kind.equals("birthday")?day.substring(5).equals(date.substring(5)):day.equals(date))rows.add(new String[]{cur.getString(0),cur.getString(1),kind,day,cur.getString(4)});}}
-   runOnUiThread(()->{if(!selectedDay.equals(date))return;items.removeAllViews();for(String[] x:rows){long id=Long.parseLong(x[0]);String title=x[1],kind=x[2],day=x[3];boolean done=x[4].equals("1");LinearLayout row=new LinearLayout(this);row.setOrientation(0);if(kind.equals("task")){CheckBox check=new CheckBox(this);check.setChecked(done);check.setOnCheckedChangeListener((v,b)->write(()->store.setDone(id,b)));row.addView(check);}TextView text=label((kind.equals("birthday")?"🎂 ":kind.equals("event")?"📅 ":"")+title,17);if(done)text.setPaintFlags(text.getPaintFlags()|8);row.addView(text);row.setOnLongClickListener(v->{new AlertDialog.Builder(this).setTitle(title).setItems(new String[]{"Edit / reschedule","Delete"},(d,which)->{if(which==0)edit(id,title,day);else new AlertDialog.Builder(this).setMessage("Delete this item?").setNegativeButton("Cancel",null).setPositiveButton("Delete",(d2,which2)->write(()->store.delete(id))).show();}).show();return true;});items.addView(row);}if(rows.isEmpty())items.addView(label("Nothing planned for this day. Enjoy the breathing room.",16));});});
+   runOnUiThread(()->{if(!selectedDay.equals(date))return;items.removeAllViews();for(String[] x:rows){long id=Long.parseLong(x[0]);String title=x[1],kind=x[2],day=x[3];boolean done=x[4].equals("1");LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(10),dp(9),dp(10),dp(9));row.setBackground(stroke(WHITE,15));LinearLayout.LayoutParams cardParams=margins(0,8);if(kind.equals("task")){CheckBox check=new CheckBox(this);check.setChecked(done);check.setOnCheckedChangeListener((v,b)->write(()->store.setDone(id,b)));row.addView(check);}TextView text=label((kind.equals("birthday")?"🎂 ":kind.equals("event")?"📅 ":"")+title,17);if(done)text.setPaintFlags(text.getPaintFlags()|8);text.setPadding(dp(4),dp(7),dp(4),dp(7));row.addView(text,new LinearLayout.LayoutParams(0,-2,1));row.setOnLongClickListener(v->{new AlertDialog.Builder(this).setTitle(title).setItems(new String[]{"Edit / reschedule","Delete"},(d,which)->{if(which==0)edit(id,title,day);else new AlertDialog.Builder(this).setMessage("Delete this item?").setNegativeButton("Cancel",null).setPositiveButton("Delete",(d2,which2)->write(()->store.delete(id))).show();}).show();return true;});items.addView(row,cardParams);}if(rows.isEmpty()){LinearLayout empty=column();empty.setGravity(Gravity.CENTER);empty.setPadding(dp(14),dp(22),dp(14),dp(22));empty.setBackground(stroke(WHITE,18));empty.addView(txt("🌱  A little breathing room",17,INK,true));empty.addView(txt("Nothing planned yet. Add one small thing whenever you’re ready.",14,MUTED,false));items.addView(empty);}});});
  }
  void edit(long id,String title,String day){LinearLayout layout=new LinearLayout(this);layout.setOrientation(1);EditText name=new EditText(this);name.setText(title);layout.addView(name);EditText date=new EditText(this);date.setText(day);date.setHint("YYYY-MM-DD");layout.addView(date);new AlertDialog.Builder(this).setTitle("Edit or reschedule").setView(layout).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{String n=name.getText().toString().trim(),dt=date.getText().toString().trim();try{fmt.setLenient(false);if(n.isEmpty()||dt.length()!=10||!fmt.format(fmt.parse(dt)).equals(dt))throw new Exception();write(()->store.update(id,n,dt));}catch(Exception ex){Toast.makeText(this,"Use a title and date YYYY-MM-DD",Toast.LENGTH_LONG).show();}}).show();}
  void focus(){String today=fmt.format(new Date());db.execute(()->{long id=-1;String name=null;try(Cursor c=store.todayTasks(today)){if(c.moveToFirst()){id=c.getLong(0);name=c.getString(1);}}final long taskId=id;final String taskName=name;runOnUiThread(()->{if(taskId>=0)new AlertDialog.Builder(this).setTitle("Just this one thing").setMessage(taskName+"\n\nYou can start small. You don't have to finish everything.").setNegativeButton("Later",null).setPositiveButton("Mark done",(d,w)->write(()->store.complete(taskId))).show();else new AlertDialog.Builder(this).setMessage("No unfinished tasks due today. Enjoy the breathing room.").setPositiveButton("OK",null).show();});});}
