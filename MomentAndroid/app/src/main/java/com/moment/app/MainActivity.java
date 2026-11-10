@@ -17,11 +17,11 @@ public class MainActivity extends Activity {
  Store store;
  final ExecutorService db=Executors.newSingleThreadExecutor();
  LinearLayout root,items;
- String selectedDay;
+ String selectedDay;YearMonth calendarMonth;
  SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
  final int INK=Color.rgb(43,37,66), MUTED=Color.rgb(111,105,130), PURPLE=Color.rgb(112,83,173), LAVENDER=Color.rgb(238,229,251), BG=Color.rgb(250,248,253), WHITE=Color.WHITE, SAGE=Color.rgb(225,239,226), BORDER=Color.rgb(232,227,239);
 
- public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());show();if("com.moment.app.QUICK_ADD".equals(getIntent().getAction()))addDialog("task");}
+ public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());calendarMonth=YearMonth.from(LocalDate.now());show();if("com.moment.app.QUICK_ADD".equals(getIntent().getAction()))addDialog("task");}
  int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+0.5f);}
  GradientDrawable bg(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
  GradientDrawable stroke(int color,int radius){GradientDrawable d=bg(color,radius);d.setStroke(dp(1),BORDER);return d;}
@@ -37,23 +37,21 @@ public class MainActivity extends Activity {
  void show(){
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root=column();root.setPadding(dp(20),dp(18),dp(20),dp(32));root.setBackgroundColor(BG);scroll.addView(root);setContentView(scroll);
   LinearLayout header=row();TextView logo=txt("moment.",34,INK,true);header.addView(logo,new LinearLayout.LayoutParams(0,-2,1));TextView leaf=txt("✦",28,PURPLE,true);header.addView(leaf);root.addView(header);root.addView(txt("One thing at a time  🌿",15,MUTED,false));
-  LinearLayout welcome=column();welcome.setPadding(dp(18),dp(17),dp(18),dp(17));welcome.setBackground(bg(LAVENDER,23));LinearLayout.LayoutParams wp=margins(20,14);root.addView(welcome,wp);
-  TextView kicker=txt("YOUR SPACE TODAY",11,PURPLE,true);welcome.addView(kicker);
-  welcome.addView(txt("Your day, your pace.",23,INK,true));
-  welcome.addView(txt("Small steps count. You get to start anywhere.",13,MUTED,false));
-  Button quick=button("＋  Add one thing",()->addDialog("task"));quick.setBackground(bg(PURPLE,15));quick.setTextColor(WHITE);welcome.addView(quick,margins(12,0));
-  LinearLayout date=row();Button prev=button("‹",()->move(-1));Button choose=button(prettyDate()+"  ▾",()->pickDate());Button next=button("›",()->move(1));date.addView(prev,new LinearLayout.LayoutParams(dp(52),dp(51)));LinearLayout.LayoutParams mid=new LinearLayout.LayoutParams(0,dp(51),1);mid.leftMargin=dp(8);mid.rightMargin=dp(8);date.addView(choose,mid);date.addView(next,new LinearLayout.LayoutParams(dp(52),dp(51)));root.addView(date,margins(2,18));
-  LinearLayout heading=row();heading.addView(txt("Today's focus",21,INK,true),new LinearLayout.LayoutParams(0,-2,1));TextView small=txt("ONE STEP AT A TIME",10,PURPLE,true);heading.addView(small);root.addView(heading);
+  LinearLayout quickBar=row();quickBar.setPadding(dp(14),dp(12),dp(14),dp(12));quickBar.setBackground(bg(LAVENDER,18));
+  LinearLayout intro=column();intro.addView(txt("Your day, your pace.",19,INK,true));intro.addView(txt("Start with just one small thing.",13,MUTED,false));quickBar.addView(intro,new LinearLayout.LayoutParams(0,-2,1));
+  Button quick=button("＋ Add",()->addDialog("task"));quick.setBackground(bg(PURPLE,14));quick.setTextColor(WHITE);quickBar.addView(quick,new LinearLayout.LayoutParams(dp(105),dp(51)));root.addView(quickBar,margins(14,0));
+  InlineCalendar.attach(this,root);
+  LinearLayout heading=row();heading.addView(txt("Tasks for this day",21,INK,true),new LinearLayout.LayoutParams(0,-2,1));TextView small=txt("ONE STEP AT A TIME",10,PURPLE,true);heading.addView(small);root.addView(heading);
   items=column();root.addView(items,margins(9,4));render();
   Button focus=button("🎯  Help me choose one thing",()->focus());focus.setBackground(bg(SAGE,17));root.addView(focus,margins(10,19));
   root.addView(txt("Your tools",21,INK,true));
-  LinearLayout first=row();addTile(first,"📅","Calendar","Events & birthdays",()->MomentFeatures.calendar(this),0);addTile(first,"📍","Add an event","Time & destination",()->MomentFeatures.addEvent(this),10);root.addView(first,margins(8,9));
+  LinearLayout first=row();addTile(first,"📍","Travel planning","Add time & address",()->MomentFeatures.addEvent(this),0);addTile(first,"🧩","Break it down","Tap a task above",()->{new AlertDialog.Builder(this).setMessage("Tap a task in your day to break it into small checkable steps with time estimates.").setPositiveButton("Got it",null).show();},10);root.addView(first,margins(8,9));
   LinearLayout second=row();addTile(second,"🧠","Brain dump","Clear your head",()->brainDump(),0);addTile(second,"⏳","Focus together","Your virtual body double",()->MomentFeatures.companion(this),10);root.addView(second);
   Button shared=button("💜  Shared space — requests",()->sharedSpace());shared.setTextSize(14);root.addView(shared,margins(12,13));
   root.addView(txt("Tip: Hold a task to edit, reschedule, or delete it. Add the MOMENT widget from your home screen to see tasks at a glance.",12,MUTED,false));
  }
- void move(int n){Calendar c=Calendar.getInstance();try{c.setTime(fmt.parse(selectedDay));}catch(Exception e){}c.add(Calendar.DATE,n);selectedDay=fmt.format(c.getTime());show();}
- void pickDate(){Calendar c=Calendar.getInstance();try{c.setTime(fmt.parse(selectedDay));}catch(Exception e){}new DatePickerDialog(this,(v,y,m,d)->{selectedDay=String.format(Locale.US,"%04d-%02d-%02d",y,m+1,d);show();},c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();}
+ void move(int n){Calendar c=Calendar.getInstance();try{c.setTime(fmt.parse(selectedDay));}catch(Exception e){}c.add(Calendar.DATE,n);selectedDay=fmt.format(c.getTime());calendarMonth=YearMonth.from(LocalDate.parse(selectedDay));show();}
+ void pickDate(){Calendar c=Calendar.getInstance();try{c.setTime(fmt.parse(selectedDay));}catch(Exception e){}new DatePickerDialog(this,(v,y,m,d)->{selectedDay=String.format(Locale.US,"%04d-%02d-%02d",y,m+1,d);calendarMonth=YearMonth.of(y,m+1);show();},c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();}
  void addDialog(String kind){EditText input=new EditText(this);input.setSingleLine(false);input.setHint(kind.equals("task")?"What needs doing?":kind.equals("birthday")?"Whose birthday?":"What's happening? (include time in title)");new AlertDialog.Builder(this).setTitle("Add "+kind).setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{String s=input.getText().toString().trim();if(!s.isEmpty()){write(()->store.add(s,kind,selectedDay));}}).show();}
  void render(){
   final String date=selectedDay;items.removeAllViews();items.addView(txt("Loading your plans…",14,MUTED,false));
