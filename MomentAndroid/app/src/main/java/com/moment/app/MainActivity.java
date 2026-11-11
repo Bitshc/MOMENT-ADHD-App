@@ -41,6 +41,16 @@ public class MainActivity extends Activity {
   LinearLayout intro=column();intro.addView(txt("Your day, your pace.",19,INK,true));intro.addView(txt("Start with just one small thing.",13,MUTED,false));quickBar.addView(intro,new LinearLayout.LayoutParams(0,-2,1));
   Button quick=button("＋ Add",()->addDialog("task"));quick.setBackground(bg(PURPLE,14));quick.setTextColor(WHITE);quickBar.addView(quick,new LinearLayout.LayoutParams(dp(105),dp(51)));root.addView(quickBar,margins(14,0));
   addOverview();
+  Button lockQuick=button(LockCapture.enabled(this)?"🔒  Lock-screen quick add: ON":"🔒  Enable lock-screen quick add",()->{
+   boolean next=!LockCapture.enabled(this);
+   if(next&&android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},301);
+    Toast.makeText(this,"Allow notifications, then tap to enable quick capture.",Toast.LENGTH_LONG).show();
+    return;
+   }
+   LockCapture.toggle(this,next);show();
+  });
+  root.addView(lockQuick,margins(10,3));
   LinearLayout lists=row();
   addTile(lists,"✅","To-do lists","All your tasks",()->openList("task"),0);
   addTile(lists,"🧹","Chores","Keep home on track",()->openList("chore"),10);
@@ -136,5 +146,5 @@ public class MainActivity extends Activity {
  void sharedSpace(){LinearLayout panel=new LinearLayout(this);panel.setOrientation(1);panel.setPadding(18,8,18,8);panel.addView(label("Requests stay private until you accept them. This starter works on one device only; remote partner invitations are not yet available.",14));panel.addView(button("+ Add a partner request (on this phone)",()->requestDialog()));int count=0;try(Cursor c=store.pendingRequests()){while(c.moveToNext()){count++;long id=c.getLong(0);String sender=c.getString(1),title=c.getString(2),day=c.getString(3);panel.addView(label(sender+" asks: "+title+"\nSuggested date: "+day,16));LinearLayout actions=new LinearLayout(this);actions.setOrientation(0);actions.addView(button("Accept",()->{write(()->store.resolveRequest(id,true));}),new LinearLayout.LayoutParams(0,-2,1));actions.addView(button("Decline",()->{write(()->store.resolveRequest(id,false));}),new LinearLayout.LayoutParams(0,-2,1));panel.addView(actions);}}if(count==0)panel.addView(label("No pending requests.",15));ScrollView sc=new ScrollView(this);sc.addView(panel);new AlertDialog.Builder(this).setTitle("Shared Space").setView(sc).setPositiveButton("Close",null).show();}
  void requestDialog(){LinearLayout panel=new LinearLayout(this);panel.setOrientation(1);EditText sender=new EditText(this);sender.setHint("Partner's name");panel.addView(sender);EditText title=new EditText(this);title.setHint("What are they requesting?");panel.addView(title);EditText day=new EditText(this);day.setText(selectedDay);day.setHint("YYYY-MM-DD");panel.addView(day);new AlertDialog.Builder(this).setTitle("New request").setView(panel).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{String name=sender.getText().toString().trim(),task=title.getText().toString().trim(),date=day.getText().toString().trim();try{fmt.setLenient(false);if(name.isEmpty()||task.isEmpty()||date.length()!=10||!fmt.format(fmt.parse(date)).equals(date))throw new Exception();write(()->store.addRequest(name,task,date));Toast.makeText(this,"Request saved — awaiting your acceptance",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"Enter a name, task and valid YYYY-MM-DD date",Toast.LENGTH_LONG).show();}}).show();}
  @Override public void onDestroy(){db.shutdown();super.onDestroy();}
- @Override public void onResume(){super.onResume();String eventDay=getIntent().getStringExtra("event_day");if(eventDay!=null){try{selectedDay=LocalDate.parse(eventDay).toString();calendarMonth=YearMonth.from(LocalDate.parse(eventDay));show();}catch(Exception ignored){}getIntent().removeExtra("event_day");}db.execute(()->EventReminders.reschedule(getApplicationContext()));}
+ @Override public void onResume(){super.onResume();String eventDay=getIntent().getStringExtra("event_day");if(eventDay!=null){try{selectedDay=LocalDate.parse(eventDay).toString();calendarMonth=YearMonth.from(LocalDate.parse(eventDay));show();}catch(Exception ignored){}getIntent().removeExtra("event_day");}db.execute(()->{EventReminders.reschedule(getApplicationContext());LockCapture.publish(getApplicationContext());});}
 }
