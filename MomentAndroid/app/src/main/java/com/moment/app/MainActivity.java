@@ -56,7 +56,7 @@ public class MainActivity extends Activity {
   root.addView(txt("Your tools",20,INK,true));
   Button widget=button("🏡  Add MOMENT to your home screen",()->new AlertDialog.Builder(this)
    .setTitle("Add your MOMENT widget")
-   .setMessage("1. Go to your Samsung home screen.\\n2. Touch and hold an empty area.\\n3. Tap Widgets.\\n4. Search MOMENT.\\n5. Hold and drag the MOMENT widget onto your home screen.\\n\\nTap a to-do or chore to check it off. Use + Add for quick capture.")
+   .setMessage("1. Go to your Samsung home screen.\n2. Touch and hold an empty area.\n3. Tap Widgets.\n4. Search MOMENT.\n5. Hold and drag the MOMENT widget onto your home screen.\n\nTap a to-do or chore to check it off. Use + Add for quick capture.")
    .setPositiveButton("Got it",null).show());
   widget.setBackground(bg(LAVENDER,17));
   root.addView(widget,margins(7,7));
