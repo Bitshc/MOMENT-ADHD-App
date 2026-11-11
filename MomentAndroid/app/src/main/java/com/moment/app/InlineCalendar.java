@@ -24,7 +24,7 @@ public class InlineCalendar {
   final boolean weekMode=a.weekView;
   final LocalDate selected=LocalDate.parse(a.selectedDay);
   final LocalDate firstVisible=weekMode?selected.minusDays(selected.getDayOfWeek().getValue()-1):month.atDay(1);
-  LinearLayout card=vertical(a);card.setPadding(dp(a,14),dp(a,15),dp(a,14),dp(a,14));card.setBackground(round(a,WHITE,23));parent.addView(card,a.margins(16,12));
+  LinearLayout card=vertical(a);card.setPadding(dp(a,14),dp(a,15),dp(a,14),dp(a,14));card.setBackground(round(a,WHITE,23));card.setTag("moment_calendar");parent.addView(card,a.margins(16,12));
   LinearLayout title=new LinearLayout(a);title.setGravity(Gravity.CENTER_VERTICAL);TextView heading=text(a,(weekMode?firstVisible.format(DateTimeFormatter.ofPattern("MMM d",Locale.US))+" – "+firstVisible.plusDays(6).format(DateTimeFormatter.ofPattern("MMM d",Locale.US)):month.format(DateTimeFormatter.ofPattern("MMMM yyyy",Locale.US))),20,INK,true);title.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
   Button back=button(a,"‹");Button next=button(a,"›");title.addView(back,new LinearLayout.LayoutParams(dp(a,45),dp(a,45)));title.addView(next,new LinearLayout.LayoutParams(dp(a,45),dp(a,45)));card.addView(title);
   LinearLayout controls=new LinearLayout(a);controls.setGravity(Gravity.CENTER_VERTICAL);
