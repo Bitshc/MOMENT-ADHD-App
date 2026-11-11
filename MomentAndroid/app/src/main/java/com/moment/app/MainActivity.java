@@ -84,16 +84,16 @@ public class MainActivity extends Activity {
      long id=c.getLong(0);String name=c.getString(1),kind=c.getString(2),day=c.getString(3);
      if(("task".equals(kind)||"chore".equals(kind))&&c.getInt(4)==0&&day.compareTo(lastDay)<=0){
       String prefix=day.compareTo(today)<0?"Overdue":day.equals(today)?"Today":"Upcoming · "+day;
-      alerts.add(new String[]{String.valueOf(id),kind,prefix+" · "+("chore".equals(kind)?"🧹 ":"☐ ")+name,day});
+      alerts.add(new String[]{String.valueOf(id),kind,prefix+" · "+("chore".equals(kind)?"🧹 ":"☐ ")+name,day,name});
      }else if("event".equals(kind)&&day.compareTo(today)>=0&&day.compareTo(lastDay)<=0){
       String[] detail=store.eventDetails(id);
-      alerts.add(new String[]{String.valueOf(id),kind,"📅 "+day+(detail[0].isEmpty()?"":" at "+detail[0])+" · "+name,day});
+      alerts.add(new String[]{String.valueOf(id),kind,"📅 "+day+(detail[0].isEmpty()?"":" at "+detail[0])+" · "+name,day,name});
      }else if("birthday".equals(kind)){
       try{
        LocalDate birth=LocalDate.parse(day),now=LocalDate.now();
        LocalDate next=birthdayThisYear(birth,now.getYear());
        if(next.isBefore(now))next=birthdayThisYear(birth,now.getYear()+1);
-       if(!next.isAfter(now.plusDays(7)))alerts.add(new String[]{String.valueOf(id),kind,"🎂 "+next+" · "+name,next.toString()});
+       if(!next.isAfter(now.plusDays(7)))alerts.add(new String[]{String.valueOf(id),kind,"🎂 "+next+" · "+name,next.toString(),name});
       }catch(Exception ignored){}
      }
     }
@@ -112,7 +112,7 @@ public class MainActivity extends Activity {
       line.addView(done);
      }
      TextView entry=txt(item[2],14,INK,false);line.addView(entry,new LinearLayout.LayoutParams(0,-2,1));
-     if("event".equals(item[1]))line.setOnClickListener(v->MomentFeatures.event(this,id,item[2],item[3]));
+     if("event".equals(item[1]))line.setOnClickListener(v->MomentFeatures.event(this,id,item[4],item[3]));
      contents.addView(line);
     }
     if(alerts.size()>8)contents.addView(txt("Plus "+(alerts.size()-8)+" more upcoming items",12,MUTED,false));
