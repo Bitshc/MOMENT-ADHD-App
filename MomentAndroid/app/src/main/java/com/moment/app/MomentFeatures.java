@@ -104,7 +104,9 @@ public class MomentFeatures {
       p.addView(text(a,estimate+" Live traffic must be checked in Google Maps.",13,false));
      }catch(Exception ignored){}
     }
-    AlertDialog dialog=new AlertDialog.Builder(a).setTitle("Event details").setView(p).setNegativeButton("Close",null).setPositiveButton("Google Maps",(d,w)->{
+    TrafficPlanner.attach(a,p,id,title,day,time,address,home);
+    ScrollView eventScroll=new ScrollView(a);eventScroll.addView(p);
+    AlertDialog dialog=new AlertDialog.Builder(a).setTitle("Event details").setView(eventScroll).setNegativeButton("Close",null).setPositiveButton("Google Maps",(d,w)->{
      String start=home.getText().toString().trim();a.getPreferences(0).edit().putString("home_address",start).apply();
      if(address.isEmpty()){Toast.makeText(a,"Add a destination address to this event first.",Toast.LENGTH_LONG).show();return;}
      try{

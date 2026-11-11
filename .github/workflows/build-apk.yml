@@ -44,6 +44,12 @@ jobs:
             "build-tools;35.0.0"
 
 
+      - name: Check traffic calculations and routing contract
+        run: |
+          python -m unittest discover -s traffic-server -v
+          javac -d /tmp/moment-tests MomentAndroid/app/src/main/java/com/moment/app/DeparturePlan.java tests/DeparturePlanTest.java
+          java -cp /tmp/moment-tests com.moment.app.DeparturePlanTest
+
       - name: Build debug APK
         working-directory: MomentAndroid
         run: gradle --no-daemon :app:assembleDebug --stacktrace
