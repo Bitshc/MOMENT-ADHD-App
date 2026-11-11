@@ -94,9 +94,9 @@ public class MomentWidget extends AppWidgetProvider {
    heading.addView(R.id.week_row,day);
   }
   v.addView(R.id.calendar_grid,heading);
-  int rows=monthView?((shownMonth.lengthOfMonth()+shownMonth.atDay(1).getDayOfWeek().getValue()-2)/7)+1:1;
+  int calendarRows=monthView?((shownMonth.lengthOfMonth()+shownMonth.atDay(1).getDayOfWeek().getValue()-2)/7)+1:1;
   // Up to six month rows, or one week row.
-  for(int row=0;row<rows;row++){
+  for(int row=0;row<calendarRows;row++){
    RemoteViews week=new RemoteViews(c.getPackageName(),R.layout.widget_week);
    for(int col=0;col<7;col++){
     LocalDate dayDate=first.plusDays(row*7+col);
