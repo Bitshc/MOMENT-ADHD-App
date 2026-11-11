@@ -17,11 +17,11 @@ public class MainActivity extends Activity {
  Store store;
  final ExecutorService db=Executors.newSingleThreadExecutor();
  LinearLayout root,items;
- String selectedDay;YearMonth calendarMonth;
+ String selectedDay;YearMonth calendarMonth;boolean weekView=true;
  SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
  final int INK=Color.rgb(43,37,66), MUTED=Color.rgb(111,105,130), PURPLE=Color.rgb(112,83,173), LAVENDER=Color.rgb(238,229,251), BG=Color.rgb(250,248,253), WHITE=Color.WHITE, SAGE=Color.rgb(225,239,226), BORDER=Color.rgb(232,227,239);
 
- public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());calendarMonth=YearMonth.from(LocalDate.now());show();if("com.moment.app.QUICK_ADD".equals(getIntent().getAction()))addDialog("task");}
+ public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());calendarMonth=YearMonth.from(LocalDate.now());weekView=getPreferences(0).getBoolean("week_mode",true);show();if("com.moment.app.QUICK_ADD".equals(getIntent().getAction()))addDialog("task");}
  int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+0.5f);}
  GradientDrawable bg(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
  GradientDrawable stroke(int color,int radius){GradientDrawable d=bg(color,radius);d.setStroke(dp(1),BORDER);return d;}
@@ -69,9 +69,9 @@ public class MainActivity extends Activity {
  }
 
  void addOverview(){
-  LinearLayout card=column();card.setPadding(dp(15),dp(13),dp(15),dp(13));card.setBackground(stroke(WHITE,18));
+  LinearLayout card=column();card.setPadding(dp(12),dp(9),dp(12),dp(9));card.setBackground(stroke(WHITE,18));
   card.addView(txt("🔔  Your reminders",20,INK,true));
-  card.addView(txt("First what matters now, then your plans by category.",13,MUTED,false));
+
   LinearLayout contents=column();contents.addView(txt("Loading reminders…",13,MUTED,false));card.addView(contents);
   root.addView(card,margins(13,5));
   final LocalDate today=LocalDate.now();final String now=today.toString(),last=today.plusDays(7).toString();
@@ -115,26 +115,41 @@ public class MainActivity extends Activity {
   });
  }
  void addReminderSection(LinearLayout parent,String heading,ArrayList<String[]> rows,String empty,int cap,boolean urgent){
-  LinearLayout section=column();section.setPadding(dp(11),dp(10),dp(11),dp(10));
-  section.setBackground(bg(urgent?LAVENDER:BG,14));
-  TextView label=txt(heading+"  ("+rows.size()+")",16,INK,true);section.addView(label);
-  if(rows.isEmpty())section.addView(txt(empty,13,MUTED,false));
-  for(int i=0;i<Math.min(cap,rows.size());i++){
-   String[] item=rows.get(i);
-   LinearLayout line=row();line.setPadding(0,dp(3),0,dp(3));
-   if("task".equals(item[1])||"chore".equals(item[1])){
-    CheckBox checked=new CheckBox(this);checked.setButtonTintList(android.content.res.ColorStateList.valueOf(PURPLE));
-    checked.setOnCheckedChangeListener((v,value)->{if(value)write(()->store.setDone(Long.parseLong(item[0]),true));});
-    line.addView(checked);
+  LinearLayout section=column();section.setPadding(dp(10),dp(6),dp(10),dp(6));
+  section.setBackground(bg(urgent?LAVENDER:BG,13));
+  LinearLayout headingRow=row();
+  String key="section_"+(urgent?"urgent":heading.contains("Chores")?"chores":heading.contains("To-dos")?"todos":"events");
+  boolean expanded=getPreferences(0).getBoolean(key,urgent);
+  TextView label=txt(heading+" ("+rows.size()+")",14,INK,true);
+  headingRow.addView(label,new LinearLayout.LayoutParams(0,-2,1));
+  TextView arrow=txt(expanded?"⌃":"⌄",18,PURPLE,true);headingRow.addView(arrow);
+  section.addView(headingRow);
+  LinearLayout body=column();section.addView(body);
+  Runnable fill=()->{
+   body.removeAllViews();
+   if(rows.isEmpty())body.addView(txt(empty,12,MUTED,false));
+   for(int i=0;i<Math.min(cap,rows.size());i++){
+    String[] item=rows.get(i);LinearLayout line=row();
+    if("task".equals(item[1])||"chore".equals(item[1])){
+     CheckBox check=new CheckBox(this);check.setButtonTintList(android.content.res.ColorStateList.valueOf(PURPLE));
+     check.setOnCheckedChangeListener((v,done)->{if(done)write(()->store.setDone(Long.parseLong(item[0]),true));});
+     line.addView(check);
+    }
+    TextView name=txt(item[2]+" · "+item[4],13,INK,false);
+    name.setMaxLines(2);line.addView(name,new LinearLayout.LayoutParams(0,-2,1));
+    if("event".equals(item[1]))line.setOnClickListener(v->MomentFeatures.event(this,Long.parseLong(item[0]),item[2],item[3]));
+    body.addView(line);
    }
-   String title=item[2];
-   TextView value=txt(title+"  ·  "+item[4],14,INK,false);
-   line.addView(value,new LinearLayout.LayoutParams(0,-2,1));
-   if("event".equals(item[1]))line.setOnClickListener(v->MomentFeatures.event(this,Long.parseLong(item[0]),title,item[3]));
-   section.addView(line);
-  }
-  if(rows.size()>cap)section.addView(txt("+"+(rows.size()-cap)+" more coming up",12,MUTED,false));
-  parent.addView(section,margins(9,0));
+   if(rows.size()>cap)body.addView(txt("+"+(rows.size()-cap)+" more",12,MUTED,false));
+  };
+  if(expanded)fill();
+  headingRow.setOnClickListener(v->{
+   boolean open=body.getChildCount()==0;
+   if(open)fill();else body.removeAllViews();
+   arrow.setText(open?"⌃":"⌄");
+   getPreferences(0).edit().putBoolean(key,open).apply();
+  });
+  parent.addView(section,margins(5,0));
  }
  void openList(String kind){
   LinearLayout pane=column();pane.setPadding(dp(12),dp(8),dp(12),dp(8));
