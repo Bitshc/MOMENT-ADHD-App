@@ -32,8 +32,8 @@ public class InlineCalendar {
   LinearLayout.LayoutParams toggle1=new LinearLayout.LayoutParams(0,dp(a,39),1);toggle1.rightMargin=dp(a,7);
   controls.addView(weekToggle,toggle1);controls.addView(monthToggle,new LinearLayout.LayoutParams(0,dp(a,39),1));
   card.addView(controls,a.margins(5,3));
-  weekToggle.setOnClickListener(v->{a.weekView=true;a.show();});
-  monthToggle.setOnClickListener(v->{a.weekView=false;a.calendarMonth=YearMonth.from(LocalDate.parse(a.selectedDay));a.show();});
+  weekToggle.setOnClickListener(v->{a.weekView=true;a.getPreferences(0).edit().putBoolean("week_mode",true).apply();a.show();});
+  monthToggle.setOnClickListener(v->{a.weekView=false;a.getPreferences(0).edit().putBoolean("week_mode",false).apply();a.calendarMonth=YearMonth.from(LocalDate.parse(a.selectedDay));a.show();});
   back.setOnClickListener(v->{
    if(a.weekView){a.selectedDay=LocalDate.parse(a.selectedDay).minusWeeks(1).toString();a.calendarMonth=YearMonth.from(LocalDate.parse(a.selectedDay));}
    else a.calendarMonth=a.calendarMonth.minusMonths(1);
