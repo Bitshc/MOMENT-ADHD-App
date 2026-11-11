@@ -35,9 +35,9 @@ public final class LockCapture {
   nm.notify(ID,b.build());
  }
  static Notification.Action action(Context c,String kind,String name,int code){
-  Intent intent=new Intent(c,LockCaptureReceiver.class).setAction(ACTION).putExtra("kind",kind);
-  PendingIntent submit=PendingIntent.getBroadcast(c,code,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_MUTABLE);
-  RemoteInput input=new RemoteInput.Builder(KEY).setLabel("Enter "+kind+" title").build();
-  return new Notification.Action.Builder(android.R.drawable.ic_menu_add,name,submit).addRemoteInput(input).build();
+  Intent intent=new Intent(c,LockQuickAddActivity.class).putExtra("kind",kind)
+    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+  PendingIntent launch=PendingIntent.getActivity(c,code,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+  return new Notification.Action.Builder(android.R.drawable.ic_menu_add,name,launch).build();
  }
 }
