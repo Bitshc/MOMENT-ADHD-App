@@ -11,7 +11,7 @@ public final class LockCapture {
  static final String CHANNEL="moment_capture",KEY="capture_text",ACTION="com.moment.app.CAPTURE";
  static final int ID=2208;
  static boolean enabled(Context c){return c.getSharedPreferences("moment_settings",0).getBoolean("lock_capture",false);}
- static void toggle(Context c,boolean enabled){c.getSharedPreferences("moment_settings",0).edit().putBoolean("lock_capture",enabled).apply();publish(c);}
+ static void toggle(Context c,boolean enabled){c.getSharedPreferences("moment_settings",0).edit().putBoolean("lock_capture",enabled).apply();publish(c);LockGlance.refresh(c);}
  static void publish(Context c){
   NotificationManager nm=c.getSystemService(NotificationManager.class);
   if(!enabled(c)){nm.cancel(ID);return;}
