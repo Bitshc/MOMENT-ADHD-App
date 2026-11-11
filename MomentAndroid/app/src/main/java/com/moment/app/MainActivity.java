@@ -40,7 +40,13 @@ public class MainActivity extends Activity {
     MomentFeatures.addEvent(this);break;
    case "com.moment.app.WIDGET_CALENDAR":
     selectedDay=LocalDate.now().toString();calendarMonth=YearMonth.from(LocalDate.now());
-    show();break;
+    show();
+    View calendar=root.findViewWithTag("moment_calendar");
+    if(calendar!=null&&root.getParent() instanceof ScrollView){
+     ScrollView sc=(ScrollView)root.getParent();
+     sc.post(()->sc.smoothScrollTo(0,calendar.getTop()));
+    }
+    break;
    case "com.moment.app.WIDGET_FOCUS":MomentFeatures.companion(this);break;
    case "com.moment.app.WIDGET_ALARM":showAlarmSettings();break;
   }
