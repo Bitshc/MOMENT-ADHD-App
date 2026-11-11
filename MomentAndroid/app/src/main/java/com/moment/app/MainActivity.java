@@ -150,10 +150,10 @@ public class MainActivity extends Activity {
    }
    if(rows.size()>cap)body.addView(txt("+"+(rows.size()-cap)+" more",12,MUTED,false));
   };
-  if(expanded)fill();
+  if(expanded)fill.run();
   headingRow.setOnClickListener(v->{
    boolean open=body.getChildCount()==0;
-   if(open)fill();else body.removeAllViews();
+   if(open)fill.run();else body.removeAllViews();
    arrow.setText(open?"⌃":"⌄");
    getPreferences(0).edit().putBoolean(key,open).apply();
   });
