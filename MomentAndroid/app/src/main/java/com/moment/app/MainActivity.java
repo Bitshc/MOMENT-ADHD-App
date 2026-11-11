@@ -21,7 +21,42 @@ public class MainActivity extends Activity {
  SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
  final int INK=Color.rgb(43,37,66), MUTED=Color.rgb(111,105,130), PURPLE=Color.rgb(112,83,173), LAVENDER=Color.rgb(238,229,251), BG=Color.rgb(250,248,253), WHITE=Color.WHITE, SAGE=Color.rgb(225,239,226), BORDER=Color.rgb(232,227,239);
 
- public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());calendarMonth=YearMonth.from(LocalDate.now());weekView=getPreferences(0).getBoolean("week_mode",true);show();if("com.moment.app.QUICK_ADD".equals(getIntent().getAction()))addDialog("task");}
+ public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());calendarMonth=YearMonth.from(LocalDate.now());weekView=getPreferences(0).getBoolean("week_mode",true);show();handleWidgetAction(getIntent());}
+ @Override protected void onNewIntent(android.content.Intent intent){
+  super.onNewIntent(intent);setIntent(intent);handleWidgetAction(intent);
+ }
+ void handleWidgetAction(android.content.Intent intent){
+  if(intent==null)return;
+  String action=intent.getAction();
+  if(action==null)return;
+  // Clear the action so returning to MOMENT does not re-open a dialog.
+  intent.setAction("com.moment.app.OPEN");
+  switch(action){
+   case "com.moment.app.QUICK_ADD":
+   case "com.moment.app.WIDGET_ADD_TASK":addDialog("task");break;
+   case "com.moment.app.WIDGET_ADD_CHORE":addDialog("chore");break;
+   case "com.moment.app.WIDGET_ADD_EVENT":
+    selectedDay=LocalDate.now().toString();calendarMonth=YearMonth.from(LocalDate.now());
+    MomentFeatures.addEvent(this);break;
+   case "com.moment.app.WIDGET_CALENDAR":
+    selectedDay=LocalDate.now().toString();calendarMonth=YearMonth.from(LocalDate.now());
+    show();break;
+   case "com.moment.app.WIDGET_FOCUS":MomentFeatures.companion(this);break;
+   case "com.moment.app.WIDGET_ALARM":showAlarmSettings();break;
+  }
+ }
+ void showAlarmSettings(){
+  int hour=DailyReminder.hour(this),min=DailyReminder.minute(this);
+  new TimePickerDialog(this,(picker,h,m)->{
+   if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},301);
+    Toast.makeText(this,"Allow notifications, then set the reminder time again.",Toast.LENGTH_LONG).show();return;
+   }
+   DailyReminder.setTime(this,h,m);
+   Toast.makeText(this,"Daily reminder enabled · "+String.format(Locale.US,"%02d:%02d",h,m),Toast.LENGTH_LONG).show();
+   show();
+  },hour,min,false).show();
+ }
  int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+0.5f);}
  GradientDrawable bg(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
  GradientDrawable stroke(int color,int radius){GradientDrawable d=bg(color,radius);d.setStroke(dp(1),BORDER);return d;}
