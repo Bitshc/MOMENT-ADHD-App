@@ -38,6 +38,18 @@ public class MainActivity extends Activity {
    case "com.moment.app.WIDGET_ADD_EVENT":
     selectedDay=LocalDate.now().toString();calendarMonth=YearMonth.from(LocalDate.now());
     MomentFeatures.addEvent(this);break;
+   case "com.moment.app.WIDGET_DATE":
+    try{
+     String day=intent.getStringExtra("widget_day");
+     LocalDate date=LocalDate.parse(day);
+     selectedDay=date.toString();calendarMonth=YearMonth.from(date);show();
+     View selectedCalendar=root.findViewWithTag("moment_calendar");
+     if(selectedCalendar!=null&&root.getParent() instanceof ScrollView){
+      ScrollView sc=(ScrollView)root.getParent();
+      sc.post(()->sc.smoothScrollTo(0,selectedCalendar.getTop()));
+     }
+    }catch(Exception ignored){}
+    break;
    case "com.moment.app.WIDGET_CALENDAR":
     selectedDay=LocalDate.now().toString();calendarMonth=YearMonth.from(LocalDate.now());
     show();
