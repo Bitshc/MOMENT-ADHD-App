@@ -26,38 +26,52 @@ public final class LockGlance {
   ch.setDescription("Optional tasks and chore shortcut; hide text in lock-screen settings if you prefer.");
   ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
   manager.createNotificationChannel(ch);
-  ArrayList<String> lines=new ArrayList<>();
+  ArrayList<String> urgent=new ArrayList<>(),chores=new ArrayList<>(),todos=new ArrayList<>(),events=new ArrayList<>();
   long choreId=-1;String choreTitle=null;
-  LocalDate today=LocalDate.now();
-  String now=today.toString(), horizon=today.plusDays(3).toString();
+  LocalDate today=LocalDate.now();String now=today.toString(),horizon=today.plusDays(3).toString();
   try(Store store=new Store(c);Cursor rows=store.all()){
    while(rows.moveToNext()){
     String kind=rows.getString(2),day=rows.getString(3),name=rows.getString(1);
     if(("task".equals(kind)||"chore".equals(kind))&&rows.getInt(4)==0&&day.compareTo(horizon)<=0){
-     if("chore".equals(kind)&&day.compareTo(now)<=0&&choreId<0){choreId=rows.getLong(0);choreTitle=name;}
-     if(lines.size()<3)lines.add(("chore".equals(kind)?"🧹 ":"☐ ")+(day.compareTo(now)>0?"Soon · ":"")+name);
-    }else if("event".equals(kind)&&day.compareTo(now)>=0&&day.compareTo(horizon)<=0&&lines.size()<3){
-     lines.add("📅 "+day+" · "+name);
-    }else if("birthday".equals(kind)&&lines.size()<3){
+     boolean due=day.compareTo(now)<=0;
+     String detail=(due?(day.compareTo(now)<0?"Overdue · ":"Today · "):"Soon · ")+name;
+     if("chore".equals(kind)){
+      chores.add(detail);
+      if(due&&choreId<0){choreId=rows.getLong(0);choreTitle=name;}
+     }else todos.add(detail);
+     if(due)urgent.add(detail);
+    }else if("event".equals(kind)&&day.compareTo(now)>=0&&day.compareTo(horizon)<=0){
+     events.add(day+" · "+name);
+     if(day.equals(now))urgent.add("Event today · "+name);
+    }else if("birthday".equals(kind)){
      try{
-      LocalDate birth=LocalDate.parse(day),next=MainActivity.birthdayThisYear(LocalDate.parse(day),today.getYear());
+      LocalDate birth=LocalDate.parse(day),next=MainActivity.birthdayThisYear(birth,today.getYear());
       if(next.isBefore(today))next=MainActivity.birthdayThisYear(birth,today.getYear()+1);
-      if(!next.isAfter(today.plusDays(3)))lines.add("🎂 "+next+" · "+name);
+      if(!next.isAfter(today.plusDays(3))){
+       events.add("Birthday "+next+" · "+name);
+       if(next.equals(today))urgent.add("Birthday today · "+name);
+      }
      }catch(Exception ignored){}
     }
    }
   }
-  final String title=lines.isEmpty()?"You're caught up for now":lines.size()+" reminders";
+  int total=chores.size()+todos.size()+events.size();
+  Notification.InboxStyle groups=new Notification.InboxStyle();
+  if(!urgent.isEmpty())groups.addLine("⚡ NEEDS ATTENTION · "+urgent.size()+": "+urgent.get(0));
+  if(!chores.isEmpty())groups.addLine("🧹 CHORES · "+chores.size()+": "+chores.get(0));
+  if(!todos.isEmpty())groups.addLine("✅ TO-DOS · "+todos.size()+": "+todos.get(0));
+  if(!events.isEmpty())groups.addLine("📅 EVENTS · "+events.size()+": "+events.get(0));
+  if(total==0)groups.addLine("Nothing due in the next 3 days.");
+  String lead=!urgent.isEmpty()?urgent.get(0):total==0?"Your plans are clear":total+" upcoming items in your lists";
   Notification.Builder n=new Notification.Builder(c,CHANNEL).setSmallIcon(android.R.drawable.ic_menu_today)
-   .setContentTitle("MOMENT · "+title)
-   .setContentText(lines.isEmpty()?"Use quick capture whenever a thought appears":lines.get(0))
-   .setStyle(new Notification.InboxStyle().addLine(lines.size()>0?lines.get(0):"No pending tasks").addLine(lines.size()>1?lines.get(1):"").addLine(lines.size()>2?lines.get(2):""))
+   .setContentTitle("MOMENT · "+(urgent.isEmpty()?"Your daily reminders":urgent.size()+" need attention"))
+   .setContentText(lead).setStyle(groups)
    .setVisibility(Notification.VISIBILITY_PRIVATE)
    .setPublicVersion(new Notification.Builder(c,CHANNEL).setSmallIcon(android.R.drawable.ic_menu_today)
      .setContentTitle("MOMENT · daily glance").setContentText("Your plans are ready").build())
    .setCategory(Notification.CATEGORY_REMINDER).setOngoing(true).setOnlyAlertOnce(true);
-  Intent open=new Intent(c,MainActivity.class);
-  n.setContentIntent(PendingIntent.getActivity(c,2250,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE));
+  n.setContentIntent(PendingIntent.getActivity(c,2250,new Intent(c,MainActivity.class),
+      PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE));
   if(choreId>=0){
    Intent action=new Intent(c,LockChoreReceiver.class).setAction(DONE).putExtra("id",choreId);
    PendingIntent done=PendingIntent.getBroadcast(c,(int)(choreId%Integer.MAX_VALUE),action,
