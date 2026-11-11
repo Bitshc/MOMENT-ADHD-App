@@ -28,18 +28,26 @@ public final class LockGlance {
   manager.createNotificationChannel(ch);
   ArrayList<String> lines=new ArrayList<>();
   long choreId=-1;String choreTitle=null;
-  String now=LocalDate.now().toString();
+  LocalDate today=LocalDate.now();
+  String now=today.toString(), horizon=today.plusDays(3).toString();
   try(Store store=new Store(c);Cursor rows=store.all()){
    while(rows.moveToNext()){
-    String kind=rows.getString(2),day=rows.getString(3);
-    if(rows.getInt(4)!=0||day.compareTo(now)>0)continue;
-    if("chore".equals(kind)){
-     if(choreId<0){choreId=rows.getLong(0);choreTitle=rows.getString(1);}
-     if(lines.size()<3)lines.add("🧹 "+rows.getString(1));
-    }else if("task".equals(kind)&&lines.size()<3)lines.add("☐ "+rows.getString(1));
+    String kind=rows.getString(2),day=rows.getString(3),name=rows.getString(1);
+    if(("task".equals(kind)||"chore".equals(kind))&&rows.getInt(4)==0&&day.compareTo(horizon)<=0){
+     if("chore".equals(kind)&&day.compareTo(now)<=0&&choreId<0){choreId=rows.getLong(0);choreTitle=name;}
+     if(lines.size()<3)lines.add(("chore".equals(kind)?"🧹 ":"☐ ")+(day.compareTo(now)>0?"Soon · ":"")+name);
+    }else if("event".equals(kind)&&day.compareTo(now)>=0&&day.compareTo(horizon)<=0&&lines.size()<3){
+     lines.add("📅 "+day+" · "+name);
+    }else if("birthday".equals(kind)&&lines.size()<3){
+     try{
+      LocalDate birth=LocalDate.parse(day),next=MainActivity.birthdayThisYear(LocalDate.parse(day),today.getYear());
+      if(next.isBefore(today))next=MainActivity.birthdayThisYear(birth,today.getYear()+1);
+      if(!next.isAfter(today.plusDays(3)))lines.add("🎂 "+next+" · "+name);
+     }catch(Exception ignored){}
+    }
    }
   }
-  final String title=lines.isEmpty()?"You're caught up for now":lines.size()+" things to remember";
+  final String title=lines.isEmpty()?"You're caught up for now":lines.size()+" reminders";
   Notification.Builder n=new Notification.Builder(c,CHANNEL).setSmallIcon(android.R.drawable.ic_menu_today)
    .setContentTitle("MOMENT · "+title)
    .setContentText(lines.isEmpty()?"Use quick capture whenever a thought appears":lines.get(0))
