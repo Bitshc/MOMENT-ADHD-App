@@ -47,7 +47,7 @@ public class Store extends SQLiteOpenHelper {
  public Cursor todayTasks(String day){return getReadableDatabase().rawQuery("SELECT id,title FROM items WHERE kind='task' AND done=0 AND day<=? ORDER BY day,id LIMIT 3",new String[]{day});}
  public Cursor upcomingBirthdays(){return getReadableDatabase().rawQuery("SELECT title,day FROM items WHERE kind='birthday' ORDER BY title",null);}
  public void complete(long id){ContentValues v=new ContentValues();v.put("done",1);getWritableDatabase().update("items",v,"id=? AND kind=? AND done=0",new String[]{String.valueOf(id),"task"});}
- public void setDone(long id,boolean done){ContentValues v=new ContentValues();v.put("done",done?1:0);getWritableDatabase().update("items",v,"id=? AND kind=?",new String[]{String.valueOf(id),"task"});}
+ public void setDone(long id,boolean done){ContentValues v=new ContentValues();v.put("done",done?1:0);getWritableDatabase().update("items",v,"id=? AND kind IN ('task','chore')",new String[]{String.valueOf(id)});}
  public void delete(long id){SQLiteDatabase d=getWritableDatabase();d.beginTransaction();try{String[] args={String.valueOf(id)};d.delete("steps","item_id=?",args);d.delete("event_details","item_id=?",args);d.delete("items","id=?",args);d.setTransactionSuccessful();}finally{d.endTransaction();}}
  public Cursor all(){return getReadableDatabase().rawQuery("SELECT id,title,kind,day,done FROM items ORDER BY day,id",null);}
  public Cursor tasks(){return getReadableDatabase().rawQuery("SELECT id,title FROM items WHERE kind='task' AND done=0 ORDER BY day,id LIMIT 3",null);}
