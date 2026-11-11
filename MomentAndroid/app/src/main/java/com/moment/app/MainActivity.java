@@ -70,54 +70,71 @@ public class MainActivity extends Activity {
 
  void addOverview(){
   LinearLayout card=column();card.setPadding(dp(15),dp(13),dp(15),dp(13));card.setBackground(stroke(WHITE,18));
-  LinearLayout head=row();head.addView(txt("🔔  Your reminders",19,INK,true),new LinearLayout.LayoutParams(0,-2,1));
-  head.addView(txt("UPCOMING",10,PURPLE,true));card.addView(head);
-  card.addView(txt("To-dos, chores, events and birthdays in one place.",13,MUTED,false));
-  LinearLayout contents=column();contents.addView(txt("Checking your plans…",13,MUTED,false));card.addView(contents);
-  root.addView(card,margins(13,4));
-  final String today=LocalDate.now().toString();
-  final String lastDay=LocalDate.now().plusDays(7).toString();
+  card.addView(txt("🔔  Your reminders",20,INK,true));
+  card.addView(txt("First what matters now, then your plans by category.",13,MUTED,false));
+  LinearLayout contents=column();contents.addView(txt("Loading reminders…",13,MUTED,false));card.addView(contents);
+  root.addView(card,margins(13,5));
+  final LocalDate today=LocalDate.now();final String now=today.toString(),last=today.plusDays(7).toString();
   db.execute(()->{
-   ArrayList<String[]> alerts=new ArrayList<>();
+   ArrayList<String[]> critical=new ArrayList<>(),chores=new ArrayList<>(),todos=new ArrayList<>(),events=new ArrayList<>();
    try(Cursor c=store.all()){
     while(c.moveToNext()){
-     long id=c.getLong(0);String name=c.getString(1),kind=c.getString(2),day=c.getString(3);
-     if(("task".equals(kind)||"chore".equals(kind))&&c.getInt(4)==0&&day.compareTo(lastDay)<=0){
-      String prefix=day.compareTo(today)<0?"Overdue":day.equals(today)?"Today":"Upcoming · "+day;
-      alerts.add(new String[]{String.valueOf(id),kind,prefix+" · "+("chore".equals(kind)?"🧹 ":"☐ ")+name,day,name});
-     }else if("event".equals(kind)&&day.compareTo(today)>=0&&day.compareTo(lastDay)<=0){
-      String[] detail=store.eventDetails(id);
-      alerts.add(new String[]{String.valueOf(id),kind,"📅 "+day+(detail[0].isEmpty()?"":" at "+detail[0])+" · "+name,day,name});
+     long id=c.getLong(0);String title=c.getString(1),kind=c.getString(2),day=c.getString(3);
+     if(("task".equals(kind)||"chore".equals(kind))&&c.getInt(4)==0&&day.compareTo(last)<=0){
+      String state=day.compareTo(now)<0?"Overdue":day.equals(now)?"Due today":"Due "+day;
+      String[] item={String.valueOf(id),kind,title,day,state};
+      ("chore".equals(kind)?chores:todos).add(item);
+      if(day.compareTo(now)<=0)critical.add(item);
+     }else if("event".equals(kind)&&day.compareTo(now)>=0&&day.compareTo(last)<=0){
+      String time=store.eventDetails(id)[0];
+      String[] item={String.valueOf(id),kind,title,day,time.isEmpty()?day:day+" · "+time};
+      events.add(item);if(day.equals(now))critical.add(item);
      }else if("birthday".equals(kind)){
       try{
-       LocalDate birth=LocalDate.parse(day),now=LocalDate.now();
-       LocalDate next=birthdayThisYear(birth,now.getYear());
-       if(next.isBefore(now))next=birthdayThisYear(birth,now.getYear()+1);
-       if(!next.isAfter(now.plusDays(7)))alerts.add(new String[]{String.valueOf(id),kind,"🎂 "+next+" · "+name,next.toString(),name});
+       LocalDate birth=LocalDate.parse(day),next=birthdayThisYear(birth,today.getYear());
+       if(next.isBefore(today))next=birthdayThisYear(birth,today.getYear()+1);
+       if(!next.isAfter(today.plusDays(7))){
+        String[] item={String.valueOf(id),kind,title,next.toString(),"Birthday · "+next};
+        events.add(item);if(next.equals(today))critical.add(item);
+       }
       }catch(Exception ignored){}
      }
     }
    }
-   Collections.sort(alerts,(a,b)->a[3].compareTo(b[3]));
+   java.util.Comparator<String[]> byDate=(x,y)->x[3].compareTo(y[3]);
+   Collections.sort(critical,byDate);Collections.sort(chores,byDate);Collections.sort(todos,byDate);Collections.sort(events,byDate);
    runOnUiThread(()->{
     if(isFinishing()||isDestroyed()||contents.getParent()==null)return;
     contents.removeAllViews();
-    if(alerts.isEmpty()){contents.addView(txt("Nothing due in the next 7 days. Enjoy some breathing room.",13,MUTED,false));return;}
-    for(int i=0;i<Math.min(8,alerts.size());i++){
-     String[] item=alerts.get(i);long id=Long.parseLong(item[0]);
-     LinearLayout line=row();line.setPadding(dp(5),dp(5),dp(3),dp(5));
-     if("task".equals(item[1])||"chore".equals(item[1])){
-      CheckBox done=new CheckBox(this);done.setButtonTintList(android.content.res.ColorStateList.valueOf(PURPLE));
-      done.setOnCheckedChangeListener((v,checked)->{if(checked)write(()->store.setDone(id,true));});
-      line.addView(done);
-     }
-     TextView entry=txt(item[2],14,INK,false);line.addView(entry,new LinearLayout.LayoutParams(0,-2,1));
-     if("event".equals(item[1]))line.setOnClickListener(v->MomentFeatures.event(this,id,item[4],item[3]));
-     contents.addView(line);
-    }
-    if(alerts.size()>8)contents.addView(txt("Plus "+(alerts.size()-8)+" more upcoming items",12,MUTED,false));
+    // Critical items are repeated in their category intentionally, for easy discovery.
+    addReminderSection(contents,"⚡  Needs attention",critical,"Nothing urgent right now.",3,true);
+    addReminderSection(contents,"🧹  Chores",chores,"No chores due this week.",4,false);
+    addReminderSection(contents,"✅  To-dos",todos,"No to-dos due this week.",4,false);
+    addReminderSection(contents,"📅  Events & birthdays",events,"No events in the next 7 days.",4,false);
    });
   });
+ }
+ void addReminderSection(LinearLayout parent,String heading,ArrayList<String[]> rows,String empty,int cap,boolean urgent){
+  LinearLayout section=column();section.setPadding(dp(11),dp(10),dp(11),dp(10));
+  section.setBackground(bg(urgent?LAVENDER:BG,14));
+  TextView label=txt(heading+"  ("+rows.size()+")",16,INK,true);section.addView(label);
+  if(rows.isEmpty())section.addView(txt(empty,13,MUTED,false));
+  for(int i=0;i<Math.min(cap,rows.size());i++){
+   String[] item=rows.get(i);
+   LinearLayout line=row();line.setPadding(0,dp(3),0,dp(3));
+   if("task".equals(item[1])||"chore".equals(item[1])){
+    CheckBox checked=new CheckBox(this);checked.setButtonTintList(android.content.res.ColorStateList.valueOf(PURPLE));
+    checked.setOnCheckedChangeListener((v,value)->{if(value)write(()->store.setDone(Long.parseLong(item[0]),true));});
+    line.addView(checked);
+   }
+   String title=item[2];
+   TextView value=txt(title+"  ·  "+item[4],14,INK,false);
+   line.addView(value,new LinearLayout.LayoutParams(0,-2,1));
+   if("event".equals(item[1]))line.setOnClickListener(v->MomentFeatures.event(this,Long.parseLong(item[0]),title,item[3]));
+   section.addView(line);
+  }
+  if(rows.size()>cap)section.addView(txt("+"+(rows.size()-cap)+" more coming up",12,MUTED,false));
+  parent.addView(section,margins(9,0));
  }
  void openList(String kind){
   LinearLayout pane=column();pane.setPadding(dp(12),dp(8),dp(12),dp(8));
