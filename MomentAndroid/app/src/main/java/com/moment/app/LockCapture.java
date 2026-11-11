@@ -31,6 +31,7 @@ public final class LockCapture {
     .setCategory(Notification.CATEGORY_REMINDER);
   b.addAction(action(c,"task","＋ To-do",101));
   b.addAction(action(c,"event","＋ Event",102));
+  b.addAction(action(c,"chore","＋ Chore",103));
   nm.notify(ID,b.build());
  }
  static Notification.Action action(Context c,String kind,String name,int code){
