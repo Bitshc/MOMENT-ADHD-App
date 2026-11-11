@@ -15,7 +15,8 @@ public class LockCaptureReceiver extends BroadcastReceiver {
   CharSequence value=input.getCharSequence(LockCapture.KEY);
   String title=value==null?"":value.toString().trim();
   if(title.isEmpty())return;
-  String kind="event".equals(intent.getStringExtra("kind"))?"event":"task";
+  String requested=intent.getStringExtra("kind");
+  String kind="event".equals(requested)?"event":"chore".equals(requested)?"chore":"task";
   PendingResult result=goAsync();
   Context app=context.getApplicationContext();
   new Thread(()->{
