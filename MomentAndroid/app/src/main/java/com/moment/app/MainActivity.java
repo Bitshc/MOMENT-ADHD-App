@@ -70,30 +70,52 @@ public class MainActivity extends Activity {
 
  void addOverview(){
   LinearLayout card=column();card.setPadding(dp(15),dp(13),dp(15),dp(13));card.setBackground(stroke(WHITE,18));
-  LinearLayout title=row();title.addView(txt("🔔  Up next",19,INK,true),new LinearLayout.LayoutParams(0,-2,1));
-  TextView hint=txt("YOUR REMINDERS",10,PURPLE,true);title.addView(hint);card.addView(title);
-  LinearLayout contents=column();contents.addView(txt("Checking what's coming up…",13,MUTED,false));card.addView(contents);
+  LinearLayout head=row();head.addView(txt("🔔  Your reminders",19,INK,true),new LinearLayout.LayoutParams(0,-2,1));
+  head.addView(txt("UPCOMING",10,PURPLE,true));card.addView(head);
+  card.addView(txt("To-dos, chores, events and birthdays in one place.",13,MUTED,false));
+  LinearLayout contents=column();contents.addView(txt("Checking your plans…",13,MUTED,false));card.addView(contents);
   root.addView(card,margins(13,4));
-  String today=LocalDate.now().toString();
+  final String today=LocalDate.now().toString();
+  final String lastDay=LocalDate.now().plusDays(7).toString();
   db.execute(()->{
-   ArrayList<String> alerts=new ArrayList<>();
-   try(Cursor c=store.all()){while(c.moveToNext()){
-    String kind=c.getString(2),day=c.getString(3),name=c.getString(1);
-    boolean done=c.getInt(4)==1;
-    if(("task".equals(kind)||"chore".equals(kind))&&!done&&day.compareTo(today)<=0){
-     alerts.add((day.compareTo(today)<0?"Overdue · ":"Today · ")+("chore".equals(kind)?"🧹 ":"✅ ")+name);
-    }else if("event".equals(kind)&&day.compareTo(today)>=0&&day.compareTo(LocalDate.now().plusDays(3).toString())<=0){
-     alerts.add("📅 "+day+" · "+name);
+   ArrayList<String[]> alerts=new ArrayList<>();
+   try(Cursor c=store.all()){
+    while(c.moveToNext()){
+     long id=c.getLong(0);String name=c.getString(1),kind=c.getString(2),day=c.getString(3);
+     if(("task".equals(kind)||"chore".equals(kind))&&c.getInt(4)==0&&day.compareTo(lastDay)<=0){
+      String prefix=day.compareTo(today)<0?"Overdue":day.equals(today)?"Today":"Upcoming · "+day;
+      alerts.add(new String[]{String.valueOf(id),kind,prefix+" · "+("chore".equals(kind)?"🧹 ":"☐ ")+name,day});
+     }else if("event".equals(kind)&&day.compareTo(today)>=0&&day.compareTo(lastDay)<=0){
+      String[] detail=store.eventDetails(id);
+      alerts.add(new String[]{String.valueOf(id),kind,"📅 "+day+(detail[0].isEmpty()?"":" at "+detail[0])+" · "+name,day});
+     }else if("birthday".equals(kind)){
+      try{
+       LocalDate birth=LocalDate.parse(day),now=LocalDate.now();
+       LocalDate next=birthdayThisYear(birth,now.getYear());
+       if(next.isBefore(now))next=birthdayThisYear(birth,now.getYear()+1);
+       if(!next.isAfter(now.plusDays(7)))alerts.add(new String[]{String.valueOf(id),kind,"🎂 "+next+" · "+name,next.toString()});
+      }catch(Exception ignored){}
+     }
     }
-   }}
+   }
+   Collections.sort(alerts,(a,b)->a[3].compareTo(b[3]));
    runOnUiThread(()->{
-    if(isFinishing()||isDestroyed())return;
+    if(isFinishing()||isDestroyed()||contents.getParent()==null)return;
     contents.removeAllViews();
-    if(alerts.isEmpty())contents.addView(txt("All clear for now. You can add a task or event whenever you're ready.",13,MUTED,false));
-    else{
-     for(int i=0;i<Math.min(4,alerts.size());i++)contents.addView(txt("•  "+alerts.get(i),14,INK,false));
-     if(alerts.size()>4)contents.addView(txt("And "+(alerts.size()-4)+" more in your lists",12,MUTED,false));
+    if(alerts.isEmpty()){contents.addView(txt("Nothing due in the next 7 days. Enjoy some breathing room.",13,MUTED,false));return;}
+    for(int i=0;i<Math.min(8,alerts.size());i++){
+     String[] item=alerts.get(i);long id=Long.parseLong(item[0]);
+     LinearLayout line=row();line.setPadding(dp(5),dp(5),dp(3),dp(5));
+     if("task".equals(item[1])||"chore".equals(item[1])){
+      CheckBox done=new CheckBox(this);done.setButtonTintList(android.content.res.ColorStateList.valueOf(PURPLE));
+      done.setOnCheckedChangeListener((v,checked)->{if(checked)write(()->store.setDone(id,true));});
+      line.addView(done);
+     }
+     TextView entry=txt(item[2],14,INK,false);line.addView(entry,new LinearLayout.LayoutParams(0,-2,1));
+     if("event".equals(item[1]))line.setOnClickListener(v->MomentFeatures.event(this,id,item[2],item[3]));
+     contents.addView(line);
     }
+    if(alerts.size()>8)contents.addView(txt("Plus "+(alerts.size()-8)+" more upcoming items",12,MUTED,false));
    });
   });
  }
