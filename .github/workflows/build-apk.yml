@@ -49,6 +49,8 @@ jobs:
           python -m unittest discover -s tests -p 'test_*.py' -v
           javac -d /tmp/moment-tests MomentAndroid/app/src/main/java/com/moment/app/ReminderPlan.java tests/ReminderPlanTest.java
           java -cp /tmp/moment-tests com.moment.app.ReminderPlanTest
+          javac -d /tmp/moment-tests MomentAndroid/app/src/main/java/com/moment/app/CalendarItem.java MomentAndroid/app/src/main/java/com/moment/app/CalendarMath.java tests/CalendarMathTest.java
+          java -cp /tmp/moment-tests com.moment.app.CalendarMathTest
 
       - name: Build debug APK
         working-directory: MomentAndroid

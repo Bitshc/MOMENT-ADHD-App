@@ -20,9 +20,9 @@ class MigrationTest(unittest.TestCase):
             INSERT INTO steps VALUES(3,2,'Fold',5,1);
             INSERT INTO requests VALUES(4,'Partner','Dinner','2026-11-12','pending');
         """)
-        migration = re.search(r'd.execSQL\("(ALTER TABLE event_details [^"]+)"\)', SOURCE).group(1)
-        db.execute(migration)
-        self.assertEqual(db.execute("SELECT * FROM event_details").fetchone(), (1, '14:00', '123 Main St', 20, 0))
+        for migration in re.findall(r'd.execSQL\("(ALTER TABLE event_details [^"]+)"\)', SOURCE):
+            db.execute(migration)
+        self.assertEqual(db.execute("SELECT * FROM event_details").fetchone(), (1, '14:00', '123 Main St', 20, 0, 30, 'Personal'))
         self.assertEqual(db.execute("SELECT done FROM items WHERE id=2").fetchone(), (1,))
         self.assertEqual(db.execute("SELECT done FROM steps WHERE id=3").fetchone(), (1,))
         self.assertEqual(db.execute("SELECT status FROM requests WHERE id=4").fetchone(), ('pending',))
@@ -38,6 +38,14 @@ class MigrationTest(unittest.TestCase):
         db.execute(schema)
         db.execute("INSERT INTO event_details(item_id,time) VALUES(1,'12:00')")
         self.assertEqual(db.execute("SELECT remind FROM event_details").fetchone(), (0,))
+
+    def test_version_four_calendar_upgrade_keeps_existing_reminders(self):
+        db = sqlite3.connect(":memory:")
+        db.executescript("CREATE TABLE event_details(item_id INTEGER PRIMARY KEY,time TEXT,address TEXT,trip_minutes INTEGER,remind INTEGER); INSERT INTO event_details VALUES(1,'09:00','Office',10,1);")
+        for migration in re.findall(r'd.execSQL\("(ALTER TABLE event_details [^"]+)"\)', SOURCE):
+            if 'COLUMN remind ' not in migration:
+                db.execute(migration)
+        self.assertEqual(db.execute('SELECT * FROM event_details').fetchone(), (1,'09:00','Office',10,1,30,'Personal'))
 
 
 if __name__ == '__main__':

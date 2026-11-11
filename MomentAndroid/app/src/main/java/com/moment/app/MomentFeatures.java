@@ -68,24 +68,7 @@ public class MomentFeatures {
    });
   });
  }
- static void addEvent(MainActivity a){
-  LinearLayout p=vertical(a);
-  EditText title=new EditText(a);title.setHint("Event name");p.addView(title);
-  EditText when=new EditText(a);when.setHint("Time (24-hour HH:mm, e.g. 14:30)");when.setSingleLine(true);p.addView(when);
-  EditText dest=new EditText(a);dest.setHint("Destination address (optional)");dest.setSingleLine(true);p.addView(dest);
-  EditText trip=new EditText(a);trip.setHint("Estimated travel minutes (optional)");trip.setInputType(2);p.addView(trip);
-  CheckBox reminders=ReminderControls.choice(a,p);
-  new AlertDialog.Builder(a).setTitle("Add event · "+a.selectedDay).setView(p).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{
-   String name=title.getText().toString().trim(),time=when.getText().toString().trim(),address=dest.getText().toString().trim(),m=trip.getText().toString().trim(),day=a.selectedDay;
-   try{
-    if(name.isEmpty())throw new Exception();
-    if(!time.isEmpty())ReminderPlan.arrival(day,time,ZoneId.systemDefault());
-    if(reminders.isChecked()&&(time.isEmpty()||ReminderPlan.arrival(day,time,ZoneId.systemDefault())<=System.currentTimeMillis()))throw new Exception();
-    int minutes=m.isEmpty()?0:Integer.parseInt(m);if(minutes<0||minutes>1440)throw new Exception();
-    final boolean remind=reminders.isChecked();a.write(()->a.store.addEvent(name,day,time,address,minutes,remind));
-   }catch(Exception ex){Toast.makeText(a,"Add a title, valid HH:mm time and travel minutes.",Toast.LENGTH_LONG).show();}
-  }).show();
- }
+ static void addEvent(MainActivity a){EventEditor.create(a,LocalDate.parse(a.selectedDay),InlineCalendar.suggested(LocalDate.parse(a.selectedDay)));}
  static void event(MainActivity a,long id,String title,String day){
   a.db.execute(()->{
    String[] data=a.store.eventDetails(id);
@@ -95,6 +78,7 @@ public class MomentFeatures {
     String time=data[0],address=data[1];int mins=0;try{mins=Integer.parseInt(data[2]);}catch(Exception ignored){}
     final int travel=mins;
     LinearLayout p=vertical(a);p.addView(text(a,"📅 "+title+"\n"+day+(time.isEmpty()?"":" at "+time),18,true));
+    p.addView(text(a,(time.isEmpty()?"All day / no fixed time":data[3]+" minutes")+" · "+data[4],14,true));
     if(!address.isEmpty())p.addView(text(a,"📍 "+address,14,false));
     EditText home=new EditText(a);home.setHint("Your starting address");home.setSingleLine(true);
     home.setText(a.getPreferences(0).getString("home_address",""));p.addView(home);
@@ -119,33 +103,7 @@ public class MomentFeatures {
    });
   });
  }
- static void editEvent(MainActivity a,long id,String title,String day){
-  a.db.execute(()->{
-   String[] saved=a.store.eventDetails(id);boolean enabled=a.store.remindersEnabled(id);
-   a.runOnUiThread(()->{
-    if(a.isFinishing()||a.isDestroyed())return;
-    LinearLayout panel=vertical(a);
-    EditText name=new EditText(a);name.setHint("Event name");name.setText(title);panel.addView(name);
-    EditText date=new EditText(a);date.setHint("Date YYYY-MM-DD");date.setText(day);panel.addView(date);
-    EditText time=new EditText(a);time.setHint("Time HH:mm");time.setText(saved[0]);panel.addView(time);
-    EditText address=new EditText(a);address.setHint("Destination address (optional)");address.setText(saved[1]);panel.addView(address);
-    EditText trip=new EditText(a);trip.setHint("Estimated travel minutes (optional)");trip.setInputType(2);trip.setText(saved[2]);panel.addView(trip);
-    CheckBox reminders=ReminderControls.choice(a,panel);reminders.setChecked(enabled&&EventReminders.allowed(a));
-    ScrollView scroll=new ScrollView(a);scroll.addView(panel);
-    AlertDialog dialog=new AlertDialog.Builder(a).setTitle("Edit event").setView(scroll).setNegativeButton("Cancel",null).setPositiveButton("Save",null).create();
-    dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-     try{
-      String n=name.getText().toString().trim(),dt=date.getText().toString().trim(),tm=time.getText().toString().trim(),dest=address.getText().toString().trim(),travel=trip.getText().toString().trim();
-      boolean remind=reminders.isChecked();int minutes=travel.isEmpty()?0:Integer.parseInt(travel);
-      if(n.isEmpty()||minutes<0||minutes>1440)throw new Exception();LocalDate.parse(dt);
-      if(!tm.isEmpty())ReminderPlan.arrival(dt,tm,ZoneId.systemDefault());
-      if(remind&&(tm.isEmpty()||ReminderPlan.arrival(dt,tm,ZoneId.systemDefault())<=System.currentTimeMillis()))throw new Exception();
-      a.write(()->{a.store.updateEvent(id,n,dt,tm,dest,minutes);a.store.setReminders(id,remind);});dialog.dismiss();
-     }catch(Exception e){Toast.makeText(a,"Use a title, valid date, HH:mm time and travel minutes. Reminders need a future event time.",Toast.LENGTH_LONG).show();}
-    }));dialog.show();
-   });
-  });
- }
+ static void editEvent(MainActivity a,long id,String title,String day){EventEditor.edit(a,id,title,day);}
  static void steps(MainActivity a,long id,String title){
   a.db.execute(()->{
    ArrayList<String[]> saved=new ArrayList<>();
