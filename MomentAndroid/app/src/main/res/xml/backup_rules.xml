@@ -1,1 +1,1 @@
-<full-backup-content><exclude domain="sharedpref" path="traffic_private.xml"/></full-backup-content>
+<full-backup-content><exclude domain="sharedpref" path="traffic_private.xml"/><exclude domain="sharedpref" path="event_reminder_state.xml"/></full-backup-content>
