@@ -4,6 +4,8 @@ import android.app.*;
 import android.os.Bundle;
 import android.content.*;
 import android.graphics.Color;
+import android.speech.RecognizerIntent;
+import java.util.ArrayList;
 import android.view.*;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
@@ -32,6 +34,8 @@ public final class LockQuickAddActivity extends Activity {
   title=new EditText(this);title.setSingleLine(false);title.setMinLines(2);
   title.setHint("event".equals(kind)?"What's happening?":"chore".equals(kind)?"What chore?":"What's on your mind?");
   panel.addView(title,new LinearLayout.LayoutParams(-1,-2));
+  Button speak=new Button(this);speak.setAllCaps(false);speak.setText("🎤 Speak instead of typing");
+  panel.addView(speak);speak.setOnClickListener(v->startVoice());
   date=new EditText(this);date.setSingleLine(true);date.setHint("Date YYYY-MM-DD");date.setText(LocalDate.now().toString());panel.addView(date);
   if("event".equals(kind)){time=new EditText(this);time.setHint("Time HH:mm (optional)");time.setSingleLine(true);panel.addView(time);}
   Button save=new Button(this);save.setText("Save "+("event".equals(kind)?"event":"chore".equals(kind)?"chore":"to-do"));
@@ -41,6 +45,26 @@ public final class LockQuickAddActivity extends Activity {
   save.setOnClickListener(v->save());
   ScrollView scroll=new ScrollView(this);scroll.addView(panel);setContentView(scroll);
   title.requestFocus();
+ }
+ void startVoice(){
+  try{
+   Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+   i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+   i.putExtra(RecognizerIntent.EXTRA_PROMPT,"Say a short "+kind+" title");
+   i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
+   startActivityForResult(i,410);
+  }catch(android.content.ActivityNotFoundException ex){
+   Toast.makeText(this,"Voice recognition isn't available on this phone. You can still type.",Toast.LENGTH_LONG).show();
+  }catch(SecurityException ex){
+   Toast.makeText(this,"Voice capture isn't available while locked. Unlock to use speech.",Toast.LENGTH_LONG).show();
+  }
+ }
+ @Override protected void onActivityResult(int request,int result,Intent data){
+  super.onActivityResult(request,result,data);
+  if(request==410&&result==RESULT_OK&&data!=null){
+   ArrayList<String> results=data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+   if(results!=null&&!results.isEmpty())title.setText(results.get(0));
+  }
  }
  int dp(int x){return (int)(x*getResources().getDisplayMetrics().density+.5f);}
  void save(){
@@ -55,7 +79,7 @@ public final class LockQuickAddActivity extends Activity {
    try(Store store=new Store(getApplicationContext())){
     if("event".equals(kind))store.addEvent(text,day,clock,"",0,false);
     else store.add(text,kind,day);
-    MomentWidget.refresh(getApplicationContext());EventReminders.reschedule(getApplicationContext());
+    MomentWidget.refresh(getApplicationContext());EventReminders.reschedule(getApplicationContext());LockGlance.refresh(getApplicationContext());
     success=true;
    }catch(Exception ignored){}
    final boolean done=success;
