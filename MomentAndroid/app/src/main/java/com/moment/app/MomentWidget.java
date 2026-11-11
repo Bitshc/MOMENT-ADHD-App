@@ -13,8 +13,26 @@ import java.util.*;
 /** Interactive home-screen dashboard. Editing opens MOMENT; check-offs run in background. */
 public class MomentWidget extends AppWidgetProvider {
  static final String ACTION="com.moment.app.TOGGLE";
+ static final String CALENDAR_ACTION="com.moment.app.WIDGET_CALENDAR_ACTION";
  @Override public void onReceive(Context c,Intent i){
   super.onReceive(c,i);
+  if(CALENDAR_ACTION.equals(i.getAction())){
+   int widget=i.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,-1);
+   if(widget<0)return;
+   android.content.SharedPreferences prefs=c.getSharedPreferences("widget_calendar",0);
+   String prefix="widget_"+widget+"_";
+   boolean month=prefs.getBoolean(prefix+"month",false);
+   String op=i.getStringExtra("operation");
+   LocalDate base;
+   try{base=LocalDate.parse(prefs.getString(prefix+"date",LocalDate.now().toString()));}
+   catch(Exception ex){base=LocalDate.now();}
+   if("mode".equals(op))month=!month;
+   else if("previous".equals(op))base=month?base.minusMonths(1):base.minusWeeks(1);
+   else if("next".equals(op))base=month?base.plusMonths(1):base.plusWeeks(1);
+   prefs.edit().putBoolean(prefix+"month",month).putString(prefix+"date",base.toString()).apply();
+   draw(c,AppWidgetManager.getInstance(c),widget);
+   return;
+  }
   if(!ACTION.equals(i.getAction()))return;
   long id=i.getLongExtra("id",-1);if(id<0)return;
   Context app=c.getApplicationContext();PendingResult pending=goAsync();
@@ -32,17 +50,72 @@ public class MomentWidget extends AppWidgetProvider {
   Intent i=new Intent(c,MainActivity.class).setAction(action).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
   return PendingIntent.getActivity(c,request,i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
  }
+ static PendingIntent calendarAction(Context c,int widgetId,String operation){
+  Intent intent=new Intent(c,MomentWidget.class).setAction(CALENDAR_ACTION)
+   .setData(Uri.parse("moment://widget/"+widgetId+"/"+operation))
+   .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,widgetId).putExtra("operation",operation);
+  return PendingIntent.getBroadcast(c,widgetId*10+("next".equals(operation)?1:"previous".equals(operation)?2:3),
+   intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+ }
+ @Override public void onDeleted(Context c,int[] ids){
+  android.content.SharedPreferences.Editor edit=c.getSharedPreferences("widget_calendar",0).edit();
+  for(int id:ids){String prefix="widget_"+id+"_";edit.remove(prefix+"month").remove(prefix+"date");}
+  edit.apply();
+ }
  static void draw(Context c,AppWidgetManager manager,int widgetId){
   RemoteViews v=new RemoteViews(c.getPackageName(),R.layout.widget);
   LocalDate today=LocalDate.now();String now=today.toString(),last=today.plusDays(7).toString();
   v.setTextViewText(R.id.title,"moment.  ✦");
   v.setTextViewText(R.id.date,today.format(DateTimeFormatter.ofPattern("MMM d",Locale.US)).toUpperCase(Locale.US));
-  LocalDate monday=today.minusDays(today.getDayOfWeek().getValue()-1);
-  StringBuilder week=new StringBuilder();
-  String[] labels={"M","T","W","T","F","S","S"};
-  for(int n=0;n<7;n++){if(n>0)week.append("   ");LocalDate d=monday.plusDays(n);week.append(labels[n]).append(" ").append(d.getDayOfMonth()).append(d.equals(today)?"•":"");}
-  v.setTextViewText(R.id.calendar,week.toString());
+  android.content.SharedPreferences prefs=c.getSharedPreferences("widget_calendar",0);
+  String prefix="widget_"+widgetId+"_";
+  boolean monthView=prefs.getBoolean(prefix+"month",false);
+  LocalDate anchor;
+  try{anchor=LocalDate.parse(prefs.getString(prefix+"date",today.toString()));}
+  catch(Exception ex){anchor=today;}
+  LocalDate monday=anchor.minusDays(anchor.getDayOfWeek().getValue()-1);
+  YearMonth shownMonth=YearMonth.from(anchor);
+  LocalDate first=monthView?shownMonth.atDay(1).minusDays(shownMonth.atDay(1).getDayOfWeek().getValue()-1):monday;
+  String label=monthView?anchor.format(DateTimeFormatter.ofPattern("MMMM yyyy",Locale.US)):
+   monday.format(DateTimeFormatter.ofPattern("MMM d",Locale.US))+" – "+monday.plusDays(6).format(DateTimeFormatter.ofPattern("MMM d",Locale.US));
+  v.setTextViewText(R.id.calendar,label);
+  v.setTextViewText(R.id.cal_mode,monthView?"Week":"Month");
   v.setOnClickPendingIntent(R.id.calendar,launch(c,"com.moment.app.WIDGET_CALENDAR",401));
+  v.setOnClickPendingIntent(R.id.cal_prev,calendarAction(c,widgetId,"previous"));
+  v.setOnClickPendingIntent(R.id.cal_next,calendarAction(c,widgetId,"next"));
+  v.setOnClickPendingIntent(R.id.cal_mode,calendarAction(c,widgetId,"mode"));
+  v.removeAllViews(R.id.calendar_grid);
+  String[] names={"M","T","W","T","F","S","S"};
+  RemoteViews heading=new RemoteViews(c.getPackageName(),R.layout.widget_week);
+  for(String name:names){
+   RemoteViews day=new RemoteViews(c.getPackageName(),R.layout.widget_day);
+   day.setTextViewText(R.id.day_label,name);
+   day.setTextColor(R.id.day_label,0xff756889);
+   heading.addView(R.id.week_row,day);
+  }
+  v.addView(R.id.calendar_grid,heading);
+  int rows=monthView?((shownMonth.lengthOfMonth()+shownMonth.atDay(1).getDayOfWeek().getValue()-2)/7)+1:1;
+  // Up to six month rows, or one week row.
+  for(int row=0;row<rows;row++){
+   RemoteViews week=new RemoteViews(c.getPackageName(),R.layout.widget_week);
+   for(int col=0;col<7;col++){
+    LocalDate dayDate=first.plusDays(row*7+col);
+    RemoteViews day=new RemoteViews(c.getPackageName(),R.layout.widget_day);
+    boolean inMonth=!monthView||YearMonth.from(dayDate).equals(shownMonth);
+    day.setTextViewText(R.id.day_label,inMonth?String.valueOf(dayDate.getDayOfMonth()):"");
+    day.setTextColor(R.id.day_label,dayDate.equals(today)?0xff6d4aa8:inMonth?0xff30264b:0xffb0a7bd);
+    if(inMonth){
+     Intent open=new Intent(c,MainActivity.class).setAction("com.moment.app.WIDGET_DATE")
+        .setData(Uri.parse("moment://widget/date/"+dayDate.toString())).putExtra("widget_day",dayDate.toString())
+        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+     int request=(int)(dayDate.toEpochDay()%Integer.MAX_VALUE);
+     PendingIntent pending=PendingIntent.getActivity(c,request,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+     day.setOnClickPendingIntent(R.id.day_label,pending);
+    }
+    week.addView(R.id.week_row,day);
+   }
+   v.addView(R.id.calendar_grid,week);
+  }
   v.setOnClickPendingIntent(R.id.title,launch(c,"com.moment.app.WIDGET_HOME",402));
   v.setOnClickPendingIntent(R.id.add,launch(c,"com.moment.app.WIDGET_ADD_TASK",403));
   v.setOnClickPendingIntent(R.id.add_event,launch(c,"com.moment.app.WIDGET_ADD_EVENT",404));
