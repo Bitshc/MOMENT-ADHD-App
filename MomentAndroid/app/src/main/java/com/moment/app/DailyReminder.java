@@ -15,9 +15,15 @@ public final class DailyReminder extends android.content.BroadcastReceiver {
  static final String CHANNEL="moment_due_daily";
  static final int ID=3110;
  static boolean enabled(Context c){return c.getSharedPreferences("moment_settings",0).getBoolean("daily_reminders",false);}
+ static int hour(Context c){return c.getSharedPreferences("moment_settings",0).getInt("reminder_hour",9);}
+ static int minute(Context c){return c.getSharedPreferences("moment_settings",0).getInt("reminder_minute",0);}
+ static void setTime(Context c,int hour,int minute){
+  c.getSharedPreferences("moment_settings",0).edit().putInt("reminder_hour",hour).putInt("reminder_minute",minute).putBoolean("daily_reminders",true).apply();
+  schedule(c);MomentWidget.refresh(c);
+ }
  static void setEnabled(Context c,boolean on){
   c.getSharedPreferences("moment_settings",0).edit().putBoolean("daily_reminders",on).apply();
-  schedule(c);if(!on)c.getSystemService(NotificationManager.class).cancel(ID);
+  schedule(c);MomentWidget.refresh(c);if(!on)c.getSystemService(NotificationManager.class).cancel(ID);
  }
  static PendingIntent alarm(Context c){
   return PendingIntent.getBroadcast(c,3110,new Intent(c,DailyReminder.class).setAction(ACTION),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -26,7 +32,7 @@ public final class DailyReminder extends android.content.BroadcastReceiver {
   AlarmManager alarm=c.getSystemService(AlarmManager.class);
   alarm.cancel(alarm(c));
   if(!enabled(c))return;
-  LocalDateTime target=LocalDate.now().atTime(9,0);
+  LocalDateTime target=LocalDate.now().atTime(hour(c),minute(c));
   if(!target.isAfter(LocalDateTime.now()))target=target.plusDays(1);
   long trigger=target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
   alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,trigger,alarm(c));
