@@ -73,11 +73,11 @@ public class MomentWidget extends AppWidgetProvider {
   LocalDate anchor;
   try{anchor=LocalDate.parse(prefs.getString(prefix+"date",today.toString()));}
   catch(Exception ex){anchor=today;}
-  LocalDate monday=anchor.minusDays(anchor.getDayOfWeek().getValue()-1);
+  LocalDate sunday=anchor.minusDays(anchor.getDayOfWeek().getValue()%7);
   YearMonth shownMonth=YearMonth.from(anchor);
-  LocalDate first=monthView?shownMonth.atDay(1).minusDays(shownMonth.atDay(1).getDayOfWeek().getValue()-1):monday;
+  LocalDate first=monthView?shownMonth.atDay(1).minusDays(shownMonth.atDay(1).getDayOfWeek().getValue()%7):sunday;
   String label=monthView?anchor.format(DateTimeFormatter.ofPattern("MMMM yyyy",Locale.US)):
-   monday.format(DateTimeFormatter.ofPattern("MMM d",Locale.US))+" – "+monday.plusDays(6).format(DateTimeFormatter.ofPattern("MMM d",Locale.US));
+   sunday.format(DateTimeFormatter.ofPattern("MMM d",Locale.US))+" – "+sunday.plusDays(6).format(DateTimeFormatter.ofPattern("MMM d",Locale.US));
   v.setTextViewText(R.id.calendar,label);
   v.setTextViewText(R.id.cal_mode,monthView?"Week":"Month");
   v.setOnClickPendingIntent(R.id.calendar,launch(c,"com.moment.app.WIDGET_CALENDAR",401));
@@ -101,7 +101,7 @@ public class MomentWidget extends AppWidgetProvider {
     }
   }
   v.removeAllViews(R.id.calendar_grid);
-  String[] names={"M","T","W","T","F","S","S"};
+  String[] names={"S","M","T","W","T","F","S"};
   RemoteViews heading=new RemoteViews(c.getPackageName(),R.layout.widget_week);
   for(String name:names){
    RemoteViews day=new RemoteViews(c.getPackageName(),R.layout.widget_day);
@@ -110,7 +110,7 @@ public class MomentWidget extends AppWidgetProvider {
    heading.addView(R.id.week_row,day);
   }
   v.addView(R.id.calendar_grid,heading);
-  int calendarRows=monthView?((shownMonth.lengthOfMonth()+shownMonth.atDay(1).getDayOfWeek().getValue()-2)/7)+1:1;
+  int calendarRows=monthView?((shownMonth.lengthOfMonth()+shownMonth.atDay(1).getDayOfWeek().getValue()%7+6)/7):1;
   // Up to six month rows, or one week row.
   for(int row=0;row<calendarRows;row++){
    RemoteViews week=new RemoteViews(c.getPackageName(),R.layout.widget_week);
