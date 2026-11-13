@@ -17,11 +17,11 @@ public class MainActivity extends Activity {
  Store store;
  final ExecutorService db=Executors.newSingleThreadExecutor();
  LinearLayout root;
- String selectedDay;YearMonth calendarMonth;boolean weekView=true;
+ String selectedDay;YearMonth calendarMonth;boolean weekView=false;
  SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
  final int INK=Color.rgb(43,37,66), MUTED=Color.rgb(111,105,130), PURPLE=Color.rgb(112,83,173), LAVENDER=Color.rgb(238,229,251), BG=Color.rgb(250,248,253), WHITE=Color.WHITE, SAGE=Color.rgb(225,239,226), BORDER=Color.rgb(232,227,239);
 
- public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());calendarMonth=YearMonth.from(LocalDate.now());weekView=getPreferences(0).getBoolean("week_mode",true);show();handleWidgetAction(getIntent());}
+ public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);store=new Store(this);selectedDay=fmt.format(new Date());calendarMonth=YearMonth.from(LocalDate.now());weekView=getPreferences(0).getBoolean("week_mode",false);show();handleWidgetAction(getIntent());}
  @Override protected void onNewIntent(android.content.Intent intent){
   super.onNewIntent(intent);setIntent(intent);handleWidgetAction(intent);
  }
@@ -88,56 +88,52 @@ public class MainActivity extends Activity {
  String prettyDate(){try{return new SimpleDateFormat("EEE, MMM d",Locale.US).format(fmt.parse(selectedDay));}catch(Exception e){return selectedDay;}}
  void write(Runnable work){db.execute(()->{work.run();EventReminders.reschedule(getApplicationContext());MomentWidget.refresh(getApplicationContext());LockGlance.refresh(getApplicationContext());DailyReminder.schedule(getApplicationContext());runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())show();});});}
  void show(){
-  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root=column();root.setPadding(dp(16),dp(17),dp(16),dp(30));root.setBackgroundColor(BG);scroll.addView(root);setContentView(scroll);
-  LinearLayout header=row();TextView logo=txt("moment.",34,INK,true);header.addView(logo,new LinearLayout.LayoutParams(0,-2,1));
- TextView leaf=txt("✦",27,PURPLE,true);header.addView(leaf);root.addView(header);
- String headingDate=LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM d",Locale.US));
- root.addView(txt(headingDate+"  ·  One thing at a time",13,MUTED,false));
-  LinearLayout quickBar=row();quickBar.setPadding(dp(16),dp(14),dp(14),dp(14));quickBar.setBackground(bg(LAVENDER,22));
-  LinearLayout intro=column();intro.addView(txt("You’ve got this. 🌿",20,INK,true));intro.addView(txt("Small steps are still progress.",13,MUTED,false));quickBar.addView(intro,new LinearLayout.LayoutParams(0,-2,1));
-  Button quick=button("＋ Add",()->addDialog("task"));quick.setBackground(bg(PURPLE,14));quick.setTextColor(WHITE);quickBar.addView(quick,new LinearLayout.LayoutParams(dp(105),dp(51)));root.addView(quickBar,margins(12,1));
+  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
+  root=column();root.setPadding(dp(13),dp(10),dp(13),dp(24));root.setBackgroundColor(BG);scroll.addView(root);setContentView(scroll);
+  LinearLayout header=row();
+  TextView logo=txt("moment.",29,INK,true);header.addView(logo,new LinearLayout.LayoutParams(0,-2,1));
+  Button reminders=button("🔔",()->showReminderMenu());reminders.setContentDescription("Notification settings");
+  reminders.setTextSize(20);header.addView(reminders,new LinearLayout.LayoutParams(dp(52),dp(48)));
+  root.addView(header);
   InlineCalendar.attach(this,root);
-  if(getPreferences(0).getBoolean("calendar_quiet",false))return;
-  addOverview();
-  root.addView(txt("Your everyday lists",17,INK,true),margins(10,1));
-  LinearLayout lists=row();
-  addTile(lists,"✅","To-do lists","All your tasks",()->openList("task"),0);
-  addTile(lists,"🧹","Chores","Keep home on track",()->openList("chore"),10);
-  root.addView(lists,margins(12,15));
-
-  Button focus=button("🎯  Help me choose one thing",()->focus());focus.setBackground(bg(SAGE,17));root.addView(focus,margins(10,19));
-  root.addView(txt("Your tools",20,INK,true));
-  Button widget=button("🏡  Add MOMENT to your home screen",()->new AlertDialog.Builder(this)
-   .setTitle("Add your MOMENT widget")
-   .setMessage("1. Go to your Samsung home screen.\n2. Touch and hold an empty area.\n3. Tap Widgets.\n4. Search MOMENT.\n5. Hold and drag the MOMENT widget onto your home screen.\n\nTap a to-do or chore to check it off. Use + Add for quick capture.")
-   .setPositiveButton("Got it",null).show());
-  widget.setBackground(bg(LAVENDER,17));
-  root.addView(widget,margins(7,7));
-  LinearLayout first=row();addTile(first,"📍","Travel planning","Add time & address",()->MomentFeatures.addEvent(this),0);addTile(first,"🧩","Break it down","Tap a task above",()->{new AlertDialog.Builder(this).setMessage("Tap a task in your day to break it into small checkable steps with time estimates.").setPositiveButton("Got it",null).show();},10);root.addView(first,margins(8,9));
-  LinearLayout second=row();addTile(second,"🧠","Brain dump","Clear your head",()->brainDump(),0);addTile(second,"⏳","Focus together","Your virtual body double",()->MomentFeatures.companion(this),10);root.addView(second);
-  root.addView(txt("Preferences & shortcuts",17,INK,true),margins(16,1));
-  Button daily=button(DailyReminder.enabled(this)?"🔔 Daily task notifications: ON":"🔔 Enable daily reminders",()->{
-   if(!DailyReminder.enabled(this)&&android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
-    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},301);
-    Toast.makeText(this,"Allow notifications, then tap again to enable daily reminders.",Toast.LENGTH_LONG).show();return;
+  Button more=button("☰  More tools & settings",()->showMoreTools());
+  more.setBackground(bg(LAVENDER,17));root.addView(more,margins(10,6));
+ }
+ void showReminderMenu(){
+  String status=android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED?
+    "Notifications permission: not granted":"Notifications permission: allowed or not required";
+  String[] options={"Set daily reminder time","Daily task reminders: "+(DailyReminder.enabled(this)?"On":"Off"),"Open Android notification settings"};
+  new AlertDialog.Builder(this).setTitle("Reminders").setMessage(status+"\nEvent reminders can be configured when creating or editing events.").setItems(options,(d,n)->{
+   if(n==0)showAlarmSettings();
+   if(n==1){
+    if(!DailyReminder.enabled(this)&&android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+      requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},301);
+      Toast.makeText(this,"Allow notifications, then enable reminders again.",Toast.LENGTH_LONG).show();
+    }else{DailyReminder.setEnabled(this,!DailyReminder.enabled(this));show();}
    }
-   DailyReminder.setEnabled(this,!DailyReminder.enabled(this));show();
-  });
-  root.addView(daily,margins(5,3));
-  Button lockQuick=button(LockCapture.enabled(this)?"🔒  Lock-screen quick add: ON":"🔒  Enable lock-screen quick add",()->{
-   boolean next=!LockCapture.enabled(this);
-   if(next&&android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
-    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},301);
-    Toast.makeText(this,"Allow notifications, then tap to enable quick capture.",Toast.LENGTH_LONG).show();
-    return;
+   if(n==2){
+    android.content.Intent intent=new android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+    intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName());startActivity(intent);
    }
-   LockCapture.toggle(this,next);show();
-  });
-  root.addView(lockQuick,margins(10,3));
-  Button speak=button("🎤  Quick voice capture",()->{android.content.Intent i=new android.content.Intent(this,LockQuickAddActivity.class).putExtra("kind","task");startActivity(i);});
-  root.addView(speak,margins(5,4));
-  Button shared=button("💜  Shared space — requests",()->sharedSpace());shared.setTextSize(14);root.addView(shared,margins(12,13));
-  root.addView(txt("Tip: Hold any task to edit or reschedule it. Your widget keeps your next steps close.",12,MUTED,false));
+  }).show();
+ }
+ void showMoreTools(){
+  String[] labels={"✅ To-do lists","🧹 Chores","🧠 Brain dump","⏳ Focus together","🎯 Help me start","🎂 Add a birthday","📍 Plan an event & travel","💜 Shared Space","🏡 Home-screen widget help","🔔 Reminder settings","🎤 Voice capture"};
+  new AlertDialog.Builder(this).setTitle("More, whenever you need it").setItems(labels,(d,index)->{
+   switch(index){
+    case 0:openList("task");break;
+    case 1:openList("chore");break;
+    case 2:brainDump();break;
+    case 3:MomentFeatures.companion(this);break;
+    case 4:focus();break;
+    case 5:addDialog("birthday");break;
+    case 6:EventEditor.create(this,LocalDate.parse(selectedDay),InlineCalendar.suggested(LocalDate.parse(selectedDay)));break;
+    case 7:sharedSpace();break;
+    case 8:new AlertDialog.Builder(this).setTitle("Add the MOMENT widget").setMessage("Hold an empty spot on your Samsung home screen, tap Widgets, search MOMENT, then drag the widget onto your home screen. Resize it to show the full month.").setPositiveButton("Got it",null).show();break;
+    case 9:showReminderMenu();break;
+    case 10:startActivity(new android.content.Intent(this,LockQuickAddActivity.class).putExtra("kind","task"));break;
+   }
+  }).show();
  }
 
  void addOverview(){
