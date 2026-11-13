@@ -21,7 +21,7 @@ public class MomentWidget extends AppWidgetProvider {
    if(widget<0)return;
    android.content.SharedPreferences prefs=c.getSharedPreferences("widget_calendar",0);
    String prefix="widget_"+widget+"_";
-   boolean month=prefs.getBoolean(prefix+"month",false);
+   boolean month=prefs.getBoolean(prefix+"month",true);
    String op=i.getStringExtra("operation");
    LocalDate base;
    try{base=LocalDate.parse(prefs.getString(prefix+"date",LocalDate.now().toString()));}
@@ -84,12 +84,28 @@ public class MomentWidget extends AppWidgetProvider {
   v.setOnClickPendingIntent(R.id.cal_prev,calendarAction(c,widgetId,"previous"));
   v.setOnClickPendingIntent(R.id.cal_next,calendarAction(c,widgetId,"next"));
   v.setOnClickPendingIntent(R.id.cal_mode,calendarAction(c,widgetId,"mode"));
+  // Display events and birthdays inside the date cells, without needing to open the app.
+  Map<String,String> labels=new HashMap<>();
+  try(Store scheduleStore=new Store(c);Cursor days=scheduleStore.all()){
+    while(days.moveToNext()){
+      String kind=days.getString(2),name=days.getString(1),date=days.getString(3);
+      if(!"event".equals(kind)&&!"birthday".equals(kind))continue;
+      try{
+        LocalDate saved=LocalDate.parse(date);
+        LocalDate shown="birthday".equals(kind)?MainActivity.birthdayThisYear(saved,shownMonth.getYear()):saved;
+        if(!YearMonth.from(shown).equals(shownMonth))continue;
+        String k=shown.toString();
+        String display=("birthday".equals(kind)?"♥ ":"")+name;
+        if(!labels.containsKey(k))labels.put(k,display);
+      }catch(Exception ignored){}
+    }
+  }
   v.removeAllViews(R.id.calendar_grid);
   String[] names={"M","T","W","T","F","S","S"};
   RemoteViews heading=new RemoteViews(c.getPackageName(),R.layout.widget_week);
   for(String name:names){
    RemoteViews day=new RemoteViews(c.getPackageName(),R.layout.widget_day);
-   day.setTextViewText(R.id.day_label,name);
+   day.setTextViewText(R.id.day_label,name);day.setTextViewText(R.id.day_event,"");
    day.setTextColor(R.id.day_label,0xff756889);
    heading.addView(R.id.week_row,day);
   }
@@ -102,7 +118,7 @@ public class MomentWidget extends AppWidgetProvider {
     LocalDate dayDate=first.plusDays(row*7+col);
     RemoteViews day=new RemoteViews(c.getPackageName(),R.layout.widget_day);
     boolean inMonth=!monthView||YearMonth.from(dayDate).equals(shownMonth);
-    day.setTextViewText(R.id.day_label,inMonth?String.valueOf(dayDate.getDayOfMonth()):"");
+    day.setTextViewText(R.id.day_label,inMonth?String.valueOf(dayDate.getDayOfMonth()):"");day.setTextViewText(R.id.day_event,inMonth?labels.getOrDefault(dayDate.toString(),""):"");
     day.setTextColor(R.id.day_label,dayDate.equals(today)?0xff6d4aa8:inMonth?0xff30264b:0xffb0a7bd);
     if(inMonth){
      Intent open=new Intent(c,MainActivity.class).setAction("com.moment.app.WIDGET_DATE")
@@ -110,7 +126,7 @@ public class MomentWidget extends AppWidgetProvider {
         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
      int request=(int)(dayDate.toEpochDay()%Integer.MAX_VALUE);
      PendingIntent pending=PendingIntent.getActivity(c,request,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-     day.setOnClickPendingIntent(R.id.day_label,pending);
+     day.setOnClickPendingIntent(R.id.day_label,pending);day.setOnClickPendingIntent(R.id.day_event,pending);
     }
     week.addView(R.id.week_row,day);
    }
