@@ -68,30 +68,17 @@ public class MomentFeatures {
    });
   });
  }
- static void addEvent(MainActivity a){
-  LinearLayout p=vertical(a);
-  EditText title=new EditText(a);title.setHint("Event name");p.addView(title);
-  EditText when=new EditText(a);when.setHint("Time (24-hour HH:mm, e.g. 14:30)");when.setSingleLine(true);p.addView(when);
-  EditText dest=new EditText(a);dest.setHint("Destination address (optional)");dest.setSingleLine(true);p.addView(dest);
-  EditText trip=new EditText(a);trip.setHint("Estimated travel minutes (optional)");trip.setInputType(2);p.addView(trip);
-  new AlertDialog.Builder(a).setTitle("Add event · "+a.selectedDay).setView(p).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{
-   String name=title.getText().toString().trim(),time=when.getText().toString().trim(),address=dest.getText().toString().trim(),m=trip.getText().toString().trim(),day=a.selectedDay;
-   try{
-    if(name.isEmpty())throw new Exception();
-    if(!time.isEmpty())LocalTime.parse(time,DateTimeFormatter.ofPattern("HH:mm"));
-    int minutes=m.isEmpty()?0:Integer.parseInt(m);if(minutes<0||minutes>1440)throw new Exception();
-    a.write(()->a.store.addEvent(name,day,time,address,minutes));
-   }catch(Exception ex){Toast.makeText(a,"Add a title, valid HH:mm time and travel minutes.",Toast.LENGTH_LONG).show();}
-  }).show();
- }
+ static void addEvent(MainActivity a){EventEditor.create(a,LocalDate.parse(a.selectedDay),InlineCalendar.suggested(LocalDate.parse(a.selectedDay)));}
  static void event(MainActivity a,long id,String title,String day){
   a.db.execute(()->{
    String[] data=a.store.eventDetails(id);
+   boolean reminders=a.store.remindersEnabled(id);
    a.runOnUiThread(()->{
     if(a.isFinishing())return;
     String time=data[0],address=data[1];int mins=0;try{mins=Integer.parseInt(data[2]);}catch(Exception ignored){}
     final int travel=mins;
     LinearLayout p=vertical(a);p.addView(text(a,"📅 "+title+"\n"+day+(time.isEmpty()?"":" at "+time),18,true));
+    p.addView(text(a,(time.isEmpty()?"All day / no fixed time":data[3]+" minutes")+" · "+data[4],14,true));
     if(!address.isEmpty())p.addView(text(a,"📍 "+address,14,false));
     EditText home=new EditText(a);home.setHint("Your starting address");home.setSingleLine(true);
     home.setText(a.getPreferences(0).getString("home_address",""));p.addView(home);
@@ -104,17 +91,19 @@ public class MomentFeatures {
       p.addView(text(a,estimate+" Live traffic must be checked in Google Maps.",13,false));
      }catch(Exception ignored){}
     }
-    AlertDialog dialog=new AlertDialog.Builder(a).setTitle("Event details").setView(p).setNegativeButton("Close",null).setPositiveButton("Google Maps",(d,w)->{
+    ReminderControls.attach(a,p,id,day,time,reminders);
+    ScrollView eventScroll=new ScrollView(a);eventScroll.addView(p);
+    AlertDialog dialog=new AlertDialog.Builder(a).setTitle("Event details").setView(eventScroll).setNegativeButton("Close",null).setNeutralButton("Edit",(d,w)->editEvent(a,id,title,day)).setPositiveButton("Open Maps",(d,w)->{
      String start=home.getText().toString().trim();a.getPreferences(0).edit().putString("home_address",start).apply();
      if(address.isEmpty()){Toast.makeText(a,"Add a destination address to this event first.",Toast.LENGTH_LONG).show();return;}
      try{
-      String url="https://www.google.com/maps/dir/?api=1&origin="+URLEncoder.encode(start,"UTF-8")+"&destination="+URLEncoder.encode(address,"UTF-8")+"&travelmode=driving";
-      a.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));
+      a.startActivity(MapsLink.intent(address,start));
      }catch(Exception e){Toast.makeText(a,"Couldn't open maps.",Toast.LENGTH_LONG).show();}
     }).create();dialog.show();
    });
   });
  }
+ static void editEvent(MainActivity a,long id,String title,String day){EventEditor.edit(a,id,title,day);}
  static void steps(MainActivity a,long id,String title){
   a.db.execute(()->{
    ArrayList<String[]> saved=new ArrayList<>();

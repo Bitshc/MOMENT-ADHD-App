@@ -1,7 +1,33 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:padding="12dp" android:background="@drawable/widget_bg" android:layout_width="match_parent" android:layout_height="match_parent">
-<TextView android:id="@+id/title" android:text="MOMENT · Today" android:textStyle="bold" android:textSize="17sp" android:textColor="#242332" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="8dp" />
-<TextView android:id="@+id/task1" android:text="Tap to complete" android:textColor="#242332" android:textSize="15sp" android:padding="7dp" android:layout_width="match_parent" android:layout_height="wrap_content" />
-<TextView android:id="@+id/task2" android:text="" android:textColor="#242332" android:textSize="15sp" android:padding="7dp" android:layout_width="match_parent" android:layout_height="wrap_content" />
-<TextView android:id="@+id/task3" android:text="" android:textColor="#242332" android:textSize="15sp" android:padding="7dp" android:layout_width="match_parent" android:layout_height="wrap_content" />
-<TextView android:id="@+id/add" android:text="＋ Add / open MOMENT" android:textColor="#5146A4" android:textStyle="bold" android:padding="8dp" android:layout_width="match_parent" android:layout_height="wrap_content" />
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ android:layout_width="match_parent" android:layout_height="match_parent"
+ android:orientation="vertical" android:padding="12dp" android:background="@drawable/widget_bg">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+  <TextView android:id="@+id/title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="moment. ✦" android:textStyle="bold" android:textSize="19sp" android:textColor="#30264B" />
+  <TextView android:id="@+id/date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TODAY" android:textSize="11sp" android:textColor="#6D4AA8"/>
+ </LinearLayout>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp">
+  <TextView android:id="@+id/cal_prev" android:layout_width="36dp" android:layout_height="38dp" android:text="‹" android:gravity="center" android:textSize="24sp" android:textColor="#6D4AA8"/>
+  <TextView android:id="@+id/calendar" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:text="November 2026" android:textStyle="bold" android:gravity="center" android:textSize="14sp" android:textColor="#30264B"/>
+  <TextView android:id="@+id/cal_next" android:layout_width="36dp" android:layout_height="38dp" android:text="›" android:gravity="center" android:textSize="24sp" android:textColor="#6D4AA8"/>
+  <TextView android:id="@+id/cal_mode" android:layout_width="57dp" android:layout_height="38dp" android:text="Month" android:gravity="center" android:textSize="12sp" android:textStyle="bold" android:textColor="#6D4AA8" android:background="@drawable/widget_action_bg"/>
+ </LinearLayout>
+ <LinearLayout android:id="@+id/calendar_grid" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/widget_action_bg" android:padding="3dp"/>
+ <TextView android:id="@+id/summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="⚡ TODAY'S REMINDERS" android:textSize="12sp" android:textStyle="bold" android:textColor="#655379" android:paddingTop="9dp"/>
+ <TextView android:id="@+id/reminder" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Nothing urgent right now" android:textSize="13sp" android:textColor="#30264B" android:maxLines="1" android:ellipsize="end" android:paddingTop="4dp" android:paddingBottom="5dp"/>
+ <TextView android:id="@+id/todo_heading" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="✅ TO-DOS &amp; CHORES" android:textSize="12sp" android:textStyle="bold" android:textColor="#655379" android:paddingTop="6dp"/>
+ <TextView android:id="@+id/task1" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="☐  First task" android:textColor="#30264B" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" android:paddingTop="6dp" android:paddingBottom="6dp"/>
+ <TextView android:id="@+id/task2" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="" android:textColor="#30264B" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" android:paddingTop="6dp" android:paddingBottom="6dp"/>
+ <TextView android:id="@+id/task3" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="" android:textColor="#30264B" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" android:paddingTop="6dp" android:paddingBottom="6dp"/>
+ <TextView android:id="@+id/events_heading" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="📅 UPCOMING EVENTS" android:textSize="12sp" android:textStyle="bold" android:textColor="#655379" android:paddingTop="7dp"/>
+ <TextView android:id="@+id/event" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="No events coming up" android:textColor="#30264B" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" android:paddingTop="6dp" android:paddingBottom="6dp"/>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="7dp">
+  <TextView android:id="@+id/add" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="＋ Task" android:gravity="center" android:textSize="12sp" android:textStyle="bold" android:textColor="#6D4AA8" android:background="@drawable/widget_action_bg" android:padding="9dp"/>
+  <TextView android:id="@+id/add_event" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="＋ Event" android:gravity="center" android:textSize="12sp" android:textStyle="bold" android:textColor="#6D4AA8" android:padding="9dp"/>
+  <TextView android:id="@+id/add_chore" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="＋ Chore" android:gravity="center" android:textSize="12sp" android:textStyle="bold" android:textColor="#6D4AA8" android:background="@drawable/widget_action_bg" android:padding="9dp"/>
+ </LinearLayout>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp">
+  <TextView android:id="@+id/focus" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="🎯 Focus" android:gravity="center" android:textSize="12sp" android:textStyle="bold" android:textColor="#6D4AA8" android:padding="8dp"/>
+  <TextView android:id="@+id/alarm" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="🔔 Alarm" android:gravity="center" android:textSize="12sp" android:textStyle="bold" android:textColor="#6D4AA8" android:padding="8dp"/>
+ </LinearLayout>
 </LinearLayout>
