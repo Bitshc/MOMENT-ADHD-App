@@ -26,13 +26,39 @@ public class InlineCalendar {
  static void choose(MainActivity a,LocalDate date){a.selectedDay=date.toString();a.calendarMonth=YearMonth.from(date);a.show();}
  static void attach(MainActivity a,LinearLayout parent){
   final LocalDate selected=LocalDate.parse(a.selectedDay);final YearMonth month=a.calendarMonth;
-  final int mode=a.getPreferences(0).getInt("calendar_view",0);final boolean quiet=a.getPreferences(0).getBoolean("calendar_quiet",false);
+  final int mode=a.getPreferences(0).getInt("calendar_view",2);final boolean quiet=a.getPreferences(0).getBoolean("calendar_quiet",false);
   LinearLayout card=vertical(a);card.setPadding(a.dp(12),a.dp(14),a.dp(12),a.dp(14));card.setBackground(round(a,WHITE,22));card.setTag("moment_calendar");parent.addView(card,a.margins(12,12));
-  LinearLayout top=new LinearLayout(a);top.setGravity(Gravity.CENTER_VERTICAL);TextView title=text(a,mode==2?month.format(DateTimeFormatter.ofPattern("MMMM yyyy",Locale.US)):dateLabel(selected),21,INK,true);top.addView(title,new LinearLayout.LayoutParams(0,-2,1));Button today=button(a,"Today");top.addView(today,new LinearLayout.LayoutParams(a.dp(68),a.dp(48)));today.setOnClickListener(v->choose(a,LocalDate.now()));card.addView(top);
-  LinearLayout tabs=new LinearLayout(a);String[] names={"Day","Week","Month"};for(int n=0;n<names.length;n++){final int choice=n;Button tab=button(a,(mode==n?"✓ ":"")+names[n]);equal(a,tabs,tab);tab.setContentDescription(names[n]+" view"+(mode==n?", selected":""));tab.setOnClickListener(v->{a.getPreferences(0).edit().putInt("calendar_view",choice).putBoolean("week_mode",choice==1).apply();a.weekView=choice==1;a.calendarMonth=YearMonth.from(LocalDate.parse(a.selectedDay));a.show();});}card.addView(tabs);
-  LinearLayout nav=new LinearLayout(a);Button prev=button(a,"‹ Previous"),next=button(a,"Next ›");equal(a,nav,prev);equal(a,nav,next);card.addView(nav);prev.setOnClickListener(v->navigate(a,selected,month,mode,-1));next.setOnClickListener(v->navigate(a,selected,month,mode,1));
-  LinearLayout shortcuts=new LinearLayout(a);Button add=button(a,"＋ Event"),task=button(a,"＋ Task"),birthday=button(a,"＋ Birthday");equal(a,shortcuts,add);equal(a,shortcuts,task);equal(a,shortcuts,birthday);card.addView(shortcuts);add.setOnClickListener(v->EventEditor.create(a,selected,suggested(selected)));task.setOnClickListener(v->a.addDialog("task"));birthday.setOnClickListener(v->a.addDialog("birthday"));
-  Button focus=button(a,quiet?"Show my full day":"Less at once");focus.setOnClickListener(v->{a.getPreferences(0).edit().putBoolean("calendar_quiet",!quiet).apply();a.show();});card.addView(focus,a.margins(6,8));
+  LinearLayout top=new LinearLayout(a);top.setGravity(Gravity.CENTER_VERTICAL);
+  TextView title=text(a,mode==2?month.format(DateTimeFormatter.ofPattern("MMMM yyyy",Locale.US)):dateLabel(selected),21,INK,true);
+  top.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+  Button previous=button(a,"‹"),next=button(a,"›"),add=button(a,"＋");
+  top.addView(previous,new LinearLayout.LayoutParams(a.dp(43),a.dp(46)));
+  top.addView(next,new LinearLayout.LayoutParams(a.dp(43),a.dp(46)));
+  add.setTextSize(23);top.addView(add,new LinearLayout.LayoutParams(a.dp(52),a.dp(46)));
+  card.addView(top);
+  previous.setContentDescription("Previous "+(mode==2?"month":mode==1?"week":"day"));
+  next.setContentDescription("Next "+(mode==2?"month":mode==1?"week":"day"));
+  add.setContentDescription("Add an event, task or birthday");
+  previous.setOnClickListener(v->navigate(a,selected,month,mode,-1));
+  next.setOnClickListener(v->navigate(a,selected,month,mode,1));
+  add.setOnClickListener(v->new android.app.AlertDialog.Builder(a).setTitle("Add to "+dateLabel(selected))
+     .setItems(new String[]{"📅 Event","✅ Task","🎂 Birthday","🧹 Chore"},(dialog,choice)->{
+       if(choice==0)EventEditor.create(a,selected,suggested(selected));
+       if(choice==1)a.addDialog("task");
+       if(choice==2)a.addDialog("birthday");
+       if(choice==3)a.addDialog("chore");
+     }).show());
+  LinearLayout subnav=new LinearLayout(a);subnav.setGravity(Gravity.CENTER_VERTICAL);
+  Button view=button(a,mode==2?"Month ▾":mode==1?"Week ▾":"Day ▾");
+  Button today=button(a,"Today");subnav.addView(view,new LinearLayout.LayoutParams(0,a.dp(42),1));
+  LinearLayout.LayoutParams spacer=new LinearLayout.LayoutParams(a.dp(72),a.dp(42));spacer.leftMargin=a.dp(8);subnav.addView(today,spacer);
+  view.setOnClickListener(v->new android.app.AlertDialog.Builder(a).setTitle("Calendar view")
+      .setItems(new String[]{"Day","Week","Month"},(dialog,choice)->{
+        a.getPreferences(0).edit().putInt("calendar_view",choice).putBoolean("week_mode",choice==1).apply();
+        a.weekView=choice==1;a.calendarMonth=YearMonth.from(LocalDate.parse(a.selectedDay));a.show();
+      }).show());
+  today.setOnClickListener(v->choose(a,LocalDate.now()));
+  card.addView(subnav,a.margins(7,8));
   LinearLayout content=vertical(a);content.addView(text(a,"Gathering your plans…",14,MUTED,false));card.addView(content);
   a.db.execute(()->{
    List<CalendarItem> all=new ArrayList<>();try(Cursor c=a.store.calendarItems()){while(c.moveToNext())all.add(new CalendarItem(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),c.getInt(4)==1,c.getString(5),c.getInt(6),c.getString(7),c.getString(8),c.getInt(9),c.getString(10)));}
@@ -43,7 +69,12 @@ public class InlineCalendar {
     content.addView(text(a,(occupied/60>0?occupied/60+"h ":"")+occupied%60+"m of timed plans · "+unfinished+" unfinished tasks",13,MUTED,false),a.margins(8,4));
     if(CalendarMath.overlaps(daily))content.addView(text(a,"Some plans overlap. You can adjust them when you’re ready.",13,PURPLE,false),a.margins(4,8));
     if(!quiet)for(CalendarItem i:daily)if(i.task()&&!i.done){content.addView(text(a,"One small starting point",15,INK,true),a.margins(8,3));item(a,content,i);break;}
-    if(quiet){content.addView(text(a,"Just the next small step",17,INK,true),a.margins(8,8));int shown=0;for(CalendarItem i:daily)if(i.task()&&!i.done&&shown++<3)item(a,content,i);if(shown==0)content.addView(text(a,"Nothing to tackle here. A little breathing room counts, too.",14,MUTED,false));else if(shown>3)content.addView(text(a,"Your other tasks are saved. Show the full day whenever you want.",13,MUTED,false));}
+    if(mode==2){
+      content.addView(text(a,"Selected day · "+dateLabel(selected),17,INK,true),a.margins(12,6));
+      if(daily.isEmpty())content.addView(text(a,"Nothing scheduled. Your time is yours. 🌿",14,MUTED,false),a.margins(5,7));
+      else{int shown=0;for(CalendarItem event:daily)if(!event.done||!event.task()){item(a,content,event);shown++;}if(shown==0)content.addView(text(a,"All done for this day. 🌿",14,MUTED,false));}
+     }
+    else if(quiet){content.addView(text(a,"Just the next small step",17,INK,true),a.margins(8,8));int shown=0;for(CalendarItem i:daily)if(i.task()&&!i.done&&shown++<3)item(a,content,i);if(shown==0)content.addView(text(a,"Nothing to tackle here. A little breathing room counts, too.",14,MUTED,false));else if(shown>3)content.addView(text(a,"Your other tasks are saved. Show the full day whenever you want.",13,MUTED,false));}
     else{List<CalendarItem> timed=CalendarMath.timed(daily);if(!timed.isEmpty()||mode==0){content.addView(text(a,"Your day in time · "+dateLabel(selected),17,INK,true),a.margins(10,4));content.addView(text(a,"Tap an empty hour to add a plan. Hold a plan to edit or remove it.",12,MUTED,false),a.margins(0,8));timeline(a,content,daily,selected);}if(!timed.isEmpty()){Button details=button(a,"Time details & breathing room");LinearLayout list=vertical(a);list.setVisibility(View.GONE);details.setOnClickListener(v->list.setVisibility(list.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE));content.addView(details,a.margins(8,4));content.addView(list);for(CalendarItem i:timed){item(a,list,i);int gap=CalendarMath.gapAfter(daily,i);if(gap>0)list.addView(text(a,gap+" min between this and the next timed plan",12,MUTED,false));}}content.addView(text(a,"All-day plans & small steps",17,INK,true),a.margins(14,7));boolean any=false;for(CalendarItem i:daily)if(!i.timed()){item(a,content,i);any=true;}if(!any)content.addView(text(a,"No untimed plans here. Add one only if it helps.",13,MUTED,false));}
    });
   });
@@ -51,11 +82,11 @@ public class InlineCalendar {
  static void navigate(MainActivity a,LocalDate selected,YearMonth month,int mode,int direction){if(mode==2){YearMonth next=month.plusMonths(direction);a.calendarMonth=next;a.selectedDay=next.atDay(Math.min(selected.getDayOfMonth(),next.lengthOfMonth())).toString();a.show();}else choose(a,mode==1?selected.plusWeeks(direction):selected.plusDays(direction));}
  static LocalTime suggested(LocalDate day){if(!day.equals(LocalDate.now()))return LocalTime.of(9,0);int minute=Math.min(1410,((LocalTime.now().toSecondOfDay()/60+29)/30)*30);return LocalTime.of(minute/60,minute%60);}
  static void grid(MainActivity a,LinearLayout parent,List<CalendarItem> all,LocalDate selected,YearMonth month,int mode){
-  LocalDate start=mode==1?selected.minusDays(selected.getDayOfWeek().getValue()-1):month.atDay(1).minusDays(month.atDay(1).getDayOfWeek().getValue()-1);int cells=mode==1?7:((month.atDay(1).getDayOfWeek().getValue()-1+month.lengthOfMonth()+6)/7)*7;
-  LinearLayout labels=new LinearLayout(a);for(String label:new String[]{"M","T","W","T","F","S","S"}){TextView t=text(a,label,12,MUTED,true);t.setGravity(Gravity.CENTER);labels.addView(t,new LinearLayout.LayoutParams(0,a.dp(28),1));}parent.addView(labels);
+  LocalDate start=mode==1?selected.minusDays(selected.getDayOfWeek().getValue()%7):month.atDay(1).minusDays(month.atDay(1).getDayOfWeek().getValue()%7);int cells=mode==1?7:((month.atDay(1).getDayOfWeek().getValue()%7+month.lengthOfMonth()+6)/7)*7;
+  LinearLayout labels=new LinearLayout(a);for(String label:new String[]{"S","M","T","W","T","F","S"}){TextView t=text(a,label,12,MUTED,true);t.setGravity(Gravity.CENTER);labels.addView(t,new LinearLayout.LayoutParams(0,a.dp(28),1));}parent.addView(labels);
   for(int offset=0;offset<cells;offset+=7){LinearLayout row=new LinearLayout(a);parent.addView(row);for(int col=0;col<7;col++){
    LocalDate date=start.plusDays(offset+col);LinearLayout cell=vertical(a);cell.setPadding(a.dp(2),a.dp(5),a.dp(2),a.dp(5));cell.setBackground(round(a,date.equals(selected)?LAVENDER:BG,9));TextView number=text(a,String.valueOf(date.getDayOfMonth()),15,date.equals(LocalDate.now())?PURPLE:YearMonth.from(date).equals(month)?INK:MUTED,true);number.setGravity(Gravity.CENTER);cell.addView(number);
-   int count=0;StringBuilder accessible=new StringBuilder(dateLabel(date));for(CalendarItem i:day(all,date))if(!i.task()||!i.done){accessible.append(", ").append(i.title);if(count<1){TextView tiny=text(a,(i.timed()?i.time+" ":"birthday".equals(i.kind)?"♥ ":"· ")+i.title,10,INK,false);tiny.setSingleLine(true);tiny.setEllipsize(TextUtils.TruncateAt.END);cell.addView(tiny);}count++;}TextView extra=text(a,count>1?"+"+(count-1):count==0?"—":"",10,MUTED,false);extra.setGravity(Gravity.CENTER);cell.addView(extra);cell.setContentDescription(accessible.toString());cell.setOnClickListener(v->choose(a,date));cell.setOnLongClickListener(v->{EventEditor.create(a,date,LocalTime.of(9,0));return true;});LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,a.dp(78),1);p.setMargins(a.dp(1),a.dp(2),a.dp(1),a.dp(2));row.addView(cell,p);
+   int count=0;StringBuilder accessible=new StringBuilder(dateLabel(date));for(CalendarItem i:day(all,date))if(!i.task()||!i.done){accessible.append(", ").append(i.title);if(count<2){TextView tiny=text(a,("birthday".equals(i.kind)?"♥ ":i.task()?"· ":"")+i.title,10,INK,false);tiny.setSingleLine(true);tiny.setEllipsize(TextUtils.TruncateAt.END);tiny.setPadding(a.dp(2),a.dp(2),a.dp(2),a.dp(2));tiny.setBackground(round(a,color(i),5));cell.addView(tiny);}count++;}TextView extra=text(a,count>2?"+"+(count-2):count==0?"":"",10,MUTED,false);extra.setGravity(Gravity.CENTER);cell.addView(extra);cell.setContentDescription(accessible.toString());cell.setOnClickListener(v->choose(a,date));cell.setOnLongClickListener(v->{EventEditor.create(a,date,LocalTime.of(9,0));return true;});LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,a.dp(91),1);p.setMargins(a.dp(1),a.dp(2),a.dp(1),a.dp(2));row.addView(cell,p);
   }}
  }
  static void nowAndNext(MainActivity a,LinearLayout parent,List<CalendarItem> daily,LocalDate selected){
