@@ -4,7 +4,7 @@ name: Build MOMENT debug APK
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, feature/traffic-departure-watch]
   push:
     branches: [main]
 
