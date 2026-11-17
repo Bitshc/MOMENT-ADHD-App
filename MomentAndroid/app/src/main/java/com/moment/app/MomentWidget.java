@@ -37,8 +37,8 @@ public class MomentWidget extends AppWidgetProvider {
   long id=i.getLongExtra("id",-1);if(id<0)return;
   Context app=c.getApplicationContext();PendingResult pending=goAsync();
   new Thread(()->{try{
-   try(Store store=new Store(app)){store.setDone(id,true);}
-   refresh(app);LockGlance.refresh(app);
+   try(Store store=new Store(app)){store.completeOccurrence(id,i.getStringExtra("day"));}
+   refresh(app);LockGlance.refresh(app);TaskReminders.reschedule(app);
   }finally{pending.finish();}},"moment-widget-check").start();
  }
  @Override public void onUpdate(Context c,AppWidgetManager m,int[] ids){for(int id:ids)draw(c,m,id);}
@@ -152,7 +152,7 @@ public class MomentWidget extends AppWidgetProvider {
      if(count<3){
       int view=items[count++];
       v.setTextViewText(view,("chore".equals(kind)?"☐  🧹 ":"☐  ")+title);
-      Intent action=new Intent(c,MomentWidget.class).setAction(ACTION).setData(Uri.parse("moment://widget/check/"+id)).putExtra("id",id);
+      Intent action=new Intent(c,MomentWidget.class).setAction(ACTION).setData(Uri.parse("moment://widget/check/"+id+"/"+date)).putExtra("id",id).putExtra("day",date);
       PendingIntent pending=PendingIntent.getBroadcast(c,(int)(id%Integer.MAX_VALUE),action,PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
       v.setOnClickPendingIntent(view,pending);
      }

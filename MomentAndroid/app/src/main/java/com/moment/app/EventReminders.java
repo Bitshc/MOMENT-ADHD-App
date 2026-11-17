@@ -28,7 +28,7 @@ final class EventReminders {
     try{
      long at=ReminderPlan.arrival(rows.getString(2),rows.getString(3),ZoneId.systemDefault());
      for(int stage=0;stage<ReminderPlan.MINUTES.length;stage++)if(ReminderPlan.trigger(at,stage)>now || (ReminderPlan.latestDue(at,now)==stage && prefs.getLong("delivered-"+id+"-"+stage,0)!=at))
-      c.getSystemService(AlarmManager.class).setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,Math.max(now,ReminderPlan.trigger(at,stage)),alarm(c,id,stage,at));
+      AlarmTiming.schedule(c,Math.max(now,ReminderPlan.trigger(at,stage)),alarm(c,id,stage,at));
     }catch(IllegalArgumentException|DateTimeException ignored){}
    }
   }

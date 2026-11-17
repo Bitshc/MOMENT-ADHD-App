@@ -27,7 +27,7 @@ public final class LockGlance {
   ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
   manager.createNotificationChannel(ch);
   ArrayList<String> urgent=new ArrayList<>(),chores=new ArrayList<>(),todos=new ArrayList<>(),events=new ArrayList<>();
-  long choreId=-1;String choreTitle=null;
+  long choreId=-1;String choreTitle=null,choreDay=null;
   LocalDate today=LocalDate.now();String now=today.toString(),horizon=today.plusDays(3).toString();
   try(Store store=new Store(c);Cursor rows=store.all()){
    while(rows.moveToNext()){
@@ -37,7 +37,7 @@ public final class LockGlance {
      String detail=(due?(day.compareTo(now)<0?"Overdue · ":"Today · "):"Soon · ")+name;
      if("chore".equals(kind)){
       chores.add(detail);
-      if(due&&choreId<0){choreId=rows.getLong(0);choreTitle=name;}
+      if(due&&choreId<0){choreId=rows.getLong(0);choreTitle=name;choreDay=day;}
      }else todos.add(detail);
      if(due)urgent.add(detail);
     }else if("event".equals(kind)&&day.compareTo(now)>=0&&day.compareTo(horizon)<=0){
@@ -73,7 +73,7 @@ public final class LockGlance {
   n.setContentIntent(PendingIntent.getActivity(c,2250,new Intent(c,MainActivity.class),
       PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE));
   if(choreId>=0){
-   Intent action=new Intent(c,LockChoreReceiver.class).setAction(DONE).putExtra("id",choreId);
+   Intent action=new Intent(c,LockChoreReceiver.class).setAction(DONE).putExtra("id",choreId).putExtra("day",choreDay).setData(android.net.Uri.parse("moment://lock-chore/"+choreId+"/"+choreDay));
    PendingIntent done=PendingIntent.getBroadcast(c,(int)(choreId%Integer.MAX_VALUE),action,
       PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
    n.addAction(new Notification.Action.Builder(android.R.drawable.checkbox_on_background,

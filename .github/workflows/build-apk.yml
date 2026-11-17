@@ -51,10 +51,12 @@ jobs:
           java -cp /tmp/moment-tests com.moment.app.ReminderPlanTest
           javac -d /tmp/moment-tests MomentAndroid/app/src/main/java/com/moment/app/CalendarItem.java MomentAndroid/app/src/main/java/com/moment/app/CalendarMath.java tests/CalendarMathTest.java
           java -cp /tmp/moment-tests com.moment.app.CalendarMathTest
+          javac -cp /tmp/moment-tests -d /tmp/moment-tests MomentAndroid/app/src/main/java/com/moment/app/TaskPlan.java tests/TaskPlanTest.java
+          java -cp /tmp/moment-tests com.moment.app.TaskPlanTest
 
       - name: Build debug APK
         working-directory: MomentAndroid
-        run: gradle --no-daemon :app:assembleDebug --stacktrace
+        run: gradle --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
 
 
       - name: Upload APK
@@ -63,3 +65,53 @@ jobs:
           name: MOMENT-debug-apk
           path: MomentAndroid/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Upload device test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOMENT-device-tests
+          path: MomentAndroid/app/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
+
+  device-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: qa
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify actual Android reminders and calendar
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install -r qa/MOMENT-debug-apk/app-debug.apk
+            adb install -r qa/MOMENT-device-tests/app-debug-androidTest.apk
+            adb shell pm grant com.moment.app android.permission.POST_NOTIFICATIONS
+            adb shell appops set com.moment.app SCHEDULE_EXACT_ALARM allow
+            adb shell am instrument -w com.moment.app.test/com.moment.app.SmokeInstrumentation | tee smoke-result.txt
+            grep -q MOMENT_SMOKE_OK smoke-result.txt
+            adb exec-out run-as com.moment.app cat files/qa-week.png > qa-week.png
+      - name: Upload device evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOMENT-device-evidence
+          path: |
+            smoke-result.txt
+            qa-week.png

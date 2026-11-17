@@ -35,7 +35,7 @@ public final class DailyReminder extends android.content.BroadcastReceiver {
   LocalDateTime target=LocalDate.now().atTime(hour(c),minute(c));
   if(!target.isAfter(LocalDateTime.now()))target=target.plusDays(1);
   long trigger=target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-  alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,trigger,alarm(c));
+  AlarmTiming.schedule(c,trigger,alarm(c));
  }
  @Override public void onReceive(Context context,Intent intent){
   final Context app=context.getApplicationContext();final PendingResult pending=goAsync();
