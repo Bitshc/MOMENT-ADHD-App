@@ -1,0 +1,17 @@
+# MOMENT v0.16: make time visible
+
+The calendar is now the first main section of the dashboard. Day, Week and Month controls preserve your chosen view. Today returns to the current date; previous/next move by the selected view. Week is a seven-day overview with the selected day's timeline, rather than seven tiny time columns. Month shows a compact plan preview and additional-plan counts. Tap a date to select it; hold a date to create an event.
+
+Day view shows timed event blocks, including overlapping events in separate visual lanes. Tap an empty hour to create an event at that time. Short blocks have a minimum visual height for legibility; overlapping visual blocks can appear beside one another even when actual event times do not overlap. Time details provide full, accessible event rows with exact saved times and gaps between scheduled events. An updated Now marker and Now/Next card help show what is happening and what comes next.
+
+Event entry uses date/time pickers, duration choices, an all-day/no-fixed-time option and four labeled color categories: Personal, Work/study, Health and Rest. Optional destination and manual travel estimates are tucked away. A gentle overlap notice allows keeping both plans or adjusting the time. Hold an event or task for edit/delete. Existing reminders and Maps handoff remain available.
+
+Less at once hides the timeline and extra dashboard sections, leaving the selected date, Now/Next card and at most three unfinished tasks. Their saved first unfinished step and remaining estimated minutes are shown when available. Other plans are hidden, not deleted. Return to Full day to see everything. Completed tasks can be checked off from the calendar; birthdays repeat annually, with Feb 29 birthdays shown on Feb 28 in non-leap years.
+
+The time total measures the union of timed events so overlaps are not double-counted. It is not a free-time or energy estimate and does not include untimed tasks or travel. Gaps are time between saved events, not guarantees that you are available. Existing timed events receive a 30-minute duration until edited; this is a default, not an inferred duration. Events crossing midnight must be split across days. All-day events have no timed reminders.
+
+This remains a local Android calendar with no account, server, API key, Internet permission or paid service required. It does not sync Google Calendar, include recurring timed events, support drag-and-drop rescheduling or provide an iPhone build. Those can be developed separately. Google Calendar is a familiar interaction reference, not a linked service or a claim of feature parity.
+
+Validation covers calendar interval math, overlap layout, adjacent/nested events, unique occupied time, gaps, midnight boundaries, birthday rollover and database upgrades from versions 3 and 4 while preserving saved data. Android compilation/build and device/UI testing are reported separately; automated checks do not establish usability or ADHD treatment effectiveness.
+
+Design references: Google Calendar's Day/Week/Month navigation (https://support.google.com/calendar/answer/6110849?co=GENIE.Platform%3DAndroid&hl=en) and NHS guidance about smaller steps and staged instructions (https://www.nhsinform.scot/illnesses-and-conditions/adhd/managing-adhd-symptoms-in-work-and-education). The particular interface choices are design judgments and should be adjusted based on your testing.
